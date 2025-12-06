@@ -68,3 +68,7 @@ coverage/
 firebase-adminsdk*.json
 service-account*.json
 .secrets.baseline
+
+# Local project files
+CLAUDE.md
+PROJECT_STATUS.md
