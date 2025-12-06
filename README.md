@@ -99,11 +99,22 @@ Reminders are distributed evenly throughout the user's waking hours based on the
 - **Home** - Dashboard with progress ring, quick-add buttons, next reminder
 - **Settings** - Edit all parameters with live goal recalculation
 
-## Setup
+## Quick Start
 
-1. `npm install`
-2. `npm start`
-3. Set up Firebase Cloud Function (see `docs/FIREBASE_SETUP.md`)
+```bash
+git clone https://github.com/Geobusteni/h2o-tender.git
+cd h2o-tender
+npm install
+npm start
+```
+
+For detailed setup instructions including iOS/Android emulator configuration, see **[docs/DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md)**.
+
+## Documentation
+
+- [Development Setup](docs/DEVELOPMENT_SETUP.md) - Complete setup guide for macOS, Windows, and Linux
+- [Firebase Setup](docs/FIREBASE_SETUP.md) - Backend AI proxy configuration
+- [Getting Started](docs/GETTING_STARTED.md) - Project overview and commands
 
 ## Security
 
