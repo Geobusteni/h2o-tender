@@ -1,0 +1,11 @@
+# Security-sensitive files require owner review
+SECURITY.md @Geobusteni
+CRA_COMPLIANCE.md @Geobusteni
+LICENSE @Geobusteni
+.github/ @Geobusteni
+
+# Firebase functions (API keys could be exposed)
+firebase/ @Geobusteni
+
+# Core services
+src/services/ @Geobusteni

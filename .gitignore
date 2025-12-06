@@ -60,3 +60,11 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+# Secrets (never commit these)
+*.pem
+*secret*.json
+*credentials*.json
+firebase-adminsdk*.json
+service-account*.json
+.secrets.baseline
