@@ -105,6 +105,14 @@ Reminders are distributed evenly throughout the user's waking hours based on the
 2. `npm start`
 3. Set up Firebase Cloud Function (see `docs/FIREBASE_SETUP.md`)
 
+## Security
+
+See [SECURITY.md](SECURITY.md) for vulnerability reporting.
+
+## EU Cyber Resilience Act
+
+This project is exempt from CRA manufacturer obligations as non-commercial FOSS. See [CRA_COMPLIANCE.md](CRA_COMPLIANCE.md) for details.
+
 ## License
 
-Private project
+GPL-3.0 - see [LICENSE](LICENSE)
