@@ -93,15 +93,17 @@ Reminders are distributed evenly throughout the user's waking hours based on the
 - **Expo Notifications** - Push notifications
 - **Expo Location** - Geolocation services
 
-## Next Steps
+## Screens
 
-- [ ] Implement onboarding flow
-- [ ] Create main dashboard screen
-- [ ] Add progress ring visualization
-- [ ] Set up notification system
-- [ ] Integrate location services
-- [ ] Build AI chat interface
-- [ ] Add statistics and history views
+- **AI Onboarding** - Conversational chat to collect user preferences
+- **Home** - Dashboard with progress ring, quick-add buttons, next reminder
+- **Settings** - Edit all parameters with live goal recalculation
+
+## Setup
+
+1. `npm install`
+2. `npm start`
+3. Set up Firebase Cloud Function (see `docs/FIREBASE_SETUP.md`)
 
 ## License
 
