@@ -55,7 +55,7 @@ export function ChatInput({
     }
   };
 
-  const handleTimeChange = (event: any, date?: Date) => {
+  const handleTimeChange = (_event: any, date?: Date) => {
     if (Platform.OS === 'android') {
       setShowTimePicker(false);
     }

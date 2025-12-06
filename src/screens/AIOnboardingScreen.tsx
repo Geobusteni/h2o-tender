@@ -125,7 +125,8 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
   };
 
   // Handle location text input
-  const handleLocationText = async (locationText: string) => {
+  const handleLocationText = async (value: string | number) => {
+    const locationText = String(value);
     addUserMessage(locationText);
     setIsProcessing(true);
 
@@ -213,7 +214,8 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
   };
 
   // Handle weight input
-  const handleWeight = async (weight: number) => {
+  const handleWeight = async (value: string | number) => {
+    const weight = typeof value === 'number' ? value : parseFloat(value);
     addUserMessage(`${weight} kg`);
     setOnboardingData((prev) => ({ ...prev, weight }));
 
@@ -223,7 +225,8 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
   };
 
   // Handle age input
-  const handleAge = async (age: number) => {
+  const handleAge = async (value: string | number) => {
+    const age = typeof value === 'number' ? value : parseInt(value, 10);
     addUserMessage(`${age} years old`);
     setOnboardingData((prev) => ({ ...prev, age }));
 

@@ -1,5 +1,5 @@
-import { climateDatabase } from '../data/climate_fallback.json';
 import { getCurrentLocation, findNearestClimate } from '../utils/location';
+import climateFallbackData from '../assets/climate_fallback.json';
 
 interface ClimateResponse {
   city: string;
@@ -7,9 +7,10 @@ interface ClimateResponse {
   explanation: string;
 }
 
-interface AIResponse {
-  response: string;
-}
+// AIResponse interface for future use with server responses
+// interface AIResponse {
+//   response: string;
+// }
 
 export class AIService {
   // TODO: Add your Firebase Cloud Function URL here
@@ -90,13 +91,13 @@ export class AIService {
    * Local fallback for location-based queries using climate_fallback.json
    * Uses device location and Haversine distance to find nearest city
    */
-  private static async localFallbackAsk(prompt: string): Promise<string> {
+  private static async localFallbackAsk(_prompt: string): Promise<string> {
     try {
       // Get current device location
       const location = await getCurrentLocation();
 
       // Find nearest climate match from fallback database
-      const fallbackDB = require('../data/climate_fallback.json');
+      const fallbackDB = climateFallbackData;
       const nearestMatch = findNearestClimate(
         location.latitude,
         location.longitude,

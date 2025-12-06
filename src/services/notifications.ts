@@ -1,5 +1,4 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
 
 interface NotificationSchedule {
   hour: number;
@@ -120,9 +119,9 @@ export class NotificationService {
             },
           },
           trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DAILY,
             hour: reminder.hour,
             minute: reminder.minute,
-            repeats: true,
           },
         });
 

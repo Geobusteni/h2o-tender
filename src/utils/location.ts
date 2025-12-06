@@ -5,16 +5,19 @@ interface Coordinates {
   longitude: number;
 }
 
+// ClimateData matches the structure in climate_fallback.json
 interface ClimateData {
-  city: string;
-  country: string;
-  latitude: number;
-  longitude: number;
-  climate: 'cold' | 'mild' | 'hot' | 'veryHot';
+  place: string;
+  lat: number;
+  lon: number;
+  climate: 'cold' | 'mild' | 'hot' | 'veryHot' | string;
   explanation: string;
 }
 
-interface ClimateMatch extends ClimateData {
+export interface ClimateMatch {
+  city: string;
+  climate: 'cold' | 'mild' | 'hot' | 'veryHot';
+  explanation: string;
   distance: number;
 }
 
@@ -134,14 +137,16 @@ export function findNearestClimate(
     const distance = haversineDistance(
       lat,
       lon,
-      entry.latitude,
-      entry.longitude
+      entry.lat,
+      entry.lon
     );
 
     if (distance < minDistance) {
       minDistance = distance;
       nearestMatch = {
-        ...entry,
+        city: entry.place,
+        climate: entry.climate as ClimateMatch['climate'],
+        explanation: entry.explanation,
         distance,
       };
     }

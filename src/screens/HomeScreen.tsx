@@ -43,7 +43,6 @@ export function HomeScreen({ navigation }: HomeScreenProps): JSX.Element {
   } = useApp();
 
   const [showCustomModal, setShowCustomModal] = useState(false);
-  const [showExplanation, setShowExplanation] = useState(false);
   const [nextReminder, setNextReminder] = useState<ScheduledReminder | null>(null);
 
   /**
