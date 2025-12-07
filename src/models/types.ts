@@ -116,6 +116,7 @@ export interface AppContextActions {
   completeReminder: () => Promise<void>;
   resetDay: () => Promise<void>;
   refreshData: () => Promise<void>;
+  resetAllData: () => Promise<void>;
 }
 
 /**

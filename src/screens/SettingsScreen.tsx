@@ -22,7 +22,6 @@ import { TimePicker } from '../components/TimePicker';
 import { SegmentedControl } from '../components/SegmentedControl';
 import { calculateDailyGoal, computeReminderSchedule } from '../utils/hydration';
 import { NotificationService } from '../services/notifications';
-import { resetAll } from '../services/persistence';
 import type { ActivityLevel, ClimateType, ReminderFrequency } from '../models/types';
 
 interface SettingsScreenProps {
@@ -30,7 +29,7 @@ interface SettingsScreenProps {
 }
 
 export function SettingsScreen({ navigation }: SettingsScreenProps): React.ReactElement {
-  const { settings, updateSettings } = useApp();
+  const { settings, updateSettings, resetAllData } = useApp();
 
   // Local state for immediate UI updates
   const [weight, setWeight] = useState(settings?.weight || 70);
@@ -226,8 +225,8 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.React
           style: 'destructive',
           onPress: async () => {
             try {
-              await NotificationService.cancelAllReminders();
-              await resetAll();
+              // Use context method to reset both storage AND in-memory state
+              await resetAllData();
               Alert.alert(
                 'Data Reset',
                 'All data has been cleared. The app will now restart.',
@@ -235,7 +234,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.React
                   {
                     text: 'OK',
                     onPress: () => {
-                      // Navigate to onboarding or restart app
+                      // Navigate to onboarding - state is already cleared
                       navigation?.navigate('Onboarding');
                     },
                   },

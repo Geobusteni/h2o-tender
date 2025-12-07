@@ -15,6 +15,7 @@ import {
   saveSettings,
   loadDailyState,
   saveDailyState,
+  resetAll,
 } from '../services/persistence';
 import {
   getTodayDate,
@@ -381,6 +382,30 @@ export function AppProvider({ children }: AppProviderProps): React.ReactElement 
     }
   };
 
+  /**
+   * Reset all app data - clears storage AND in-memory state
+   * Used when user wants to completely reset the app
+   */
+  const resetAllData = async (): Promise<void> => {
+    try {
+      // Cancel all notifications first
+      await NotificationService.cancelAllReminders();
+
+      // Clear AsyncStorage
+      await resetAll();
+
+      // Reset in-memory state to null (triggers onboarding)
+      setSettings(null);
+      setDailyState(null);
+      setError(null);
+
+      console.log('All app data has been reset (storage and memory)');
+    } catch (err) {
+      console.error('Error resetting all data:', err);
+      throw new Error('Failed to reset all data');
+    }
+  };
+
   // Context value
   const value: AppContextType = {
     settings,
@@ -393,6 +418,7 @@ export function AppProvider({ children }: AppProviderProps): React.ReactElement 
     completeReminder,
     resetDay,
     refreshData,
+    resetAllData,
   };
 
   return (
