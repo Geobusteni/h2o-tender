@@ -2,9 +2,9 @@ name: Security Checks
 
 on:
   push:
-    branches: [master, main]
+    branches: [master, main, develop]
   pull_request:
-    branches: [master, main]
+    branches: [master, main, develop]
   schedule:
     # Run weekly on Monday at 9am UTC
     - cron: '0 9 * * 1'
