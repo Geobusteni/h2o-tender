@@ -23,7 +23,7 @@ import { TypingIndicator } from '../components/TypingIndicator';
 import { useApp } from '../context/AppContext';
 import { AIService } from '../services/ai';
 import { getCurrentLocation } from '../utils/location';
-import { calculateDailyGoal } from '../utils/hydration';
+import { calculateDailyGoal, computeReminderSchedule, formatMilliliters } from '../utils/hydration';
 import type {
   ChatMessage,
   ActivityLevel,
@@ -55,10 +55,13 @@ enum OnboardingStep {
   COMPLETE = 10,
 }
 
+type WeightUnit = 'kg' | 'lbs';
+
 interface OnboardingData {
   locationName?: string;
   climate?: ClimateType;
   weight?: number;
+  weightUnit?: WeightUnit;
   age?: number;
   activity?: ActivityLevel;
   wakeTime?: string;
@@ -73,16 +76,32 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({});
   const [isTyping, setIsTyping] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [deviceLocationFailed, setDeviceLocationFailed] = useState(false);
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>('kg');
   const flatListRef = useRef<FlatList>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (messages.length > 0) {
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: true });
-      }, 100);
+      // Use requestAnimationFrame for more reliable scrolling
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      });
     }
   }, [messages]);
+
+  // Also scroll when typing indicator changes
+  useEffect(() => {
+    if (isTyping) {
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 50);
+      });
+    }
+  }, [isTyping]);
 
   // Start onboarding with welcome message
   useEffect(() => {
@@ -124,7 +143,7 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
     setIsTyping(false);
   };
 
-  // Handle location text input
+  // Handle location text input (manual entry)
   const handleLocationText = async (value: string | number) => {
     const locationText = String(value);
     addUserMessage(locationText);
@@ -132,30 +151,54 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
 
     try {
       await simulateTyping(1500);
+      addAIMessage("Getting climate information for your location...");
 
-      // For text input, use default mild climate with the provided location
-      setOnboardingData((prev) => ({
-        ...prev,
-        locationName: locationText,
-        climate: 'mild',
-      }));
+      // ALWAYS try AI service for manual entry (no network check)
+      const climateData = await AIService.getClimateForCityName(locationText);
 
-      addAIMessage(
-        `Great! I've set your location to ${locationText}. I'll use a moderate climate setting for your hydration calculations.`
-      );
+      if (climateData) {
+        setOnboardingData((prev) => ({
+          ...prev,
+          locationName: climateData.city,
+          climate: climateData.climate,
+        }));
 
-      setTimeout(() => {
-        setCurrentStep(OnboardingStep.ASK_WEIGHT);
-        addAIMessage("What is your weight in kg?");
-      }, 1500);
+        addAIMessage(
+          `Perfect! You're in ${climateData.city}. ${climateData.explanation}`
+        );
+
+        setTimeout(() => {
+          setCurrentStep(OnboardingStep.ASK_WEIGHT);
+          // Message will be updated based on unit selection
+          addAIMessage("What is your weight?");
+        }, 1500);
+      } else {
+        // Fallback to default if AI fails
+        setOnboardingData((prev) => ({
+          ...prev,
+          locationName: locationText,
+          climate: 'mild',
+        }));
+
+        addAIMessage(
+          `Great! I've set your location to ${locationText}. I'll use a moderate climate setting for your hydration calculations.`
+        );
+
+        setTimeout(() => {
+          setCurrentStep(OnboardingStep.ASK_WEIGHT);
+          // Message will be updated based on unit selection
+          addAIMessage("What is your weight?");
+        }, 1500);
+      }
     } catch (error) {
+      console.error('Error processing location:', error);
       Alert.alert('Error', 'Failed to process location. Please try again.');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Handle location button press
+  // Handle location button press (device location)
   const handleLocationRequest = async () => {
     addUserMessage("Using my current location");
     setIsProcessing(true);
@@ -169,8 +212,9 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
 
       await simulateTyping(1500);
 
-      // Get climate data from AI service
-      const climateData = await AIService.getClimateForLocation(
+      // Get climate data with network check (only for device location)
+      // This will check network FIRST and return null if network is unavailable
+      const climateData = await AIService.getClimateForLocationWithNetworkCheck(
         coords.latitude,
         coords.longitude
       );
@@ -188,40 +232,85 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
 
         setTimeout(() => {
           setCurrentStep(OnboardingStep.ASK_WEIGHT);
-          addAIMessage("What is your weight in kg?");
+          // Message will be updated based on unit selection
+          addAIMessage("What is your weight?");
         }, 1500);
       } else {
-        throw new Error('Unable to determine climate data');
+        // Network check failed - require manual entry
+        throw new Error('NETWORK_UNAVAILABLE');
       }
     } catch (error) {
       console.error('Location error:', error);
-      addAIMessage(
-        "I couldn't get your location. You can type your city name instead, or I'll use default settings."
-      );
-
-      // Fall back to text input
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Mark device location as failed - hide the button
+      setDeviceLocationFailed(true);
+      
+      // Network unavailable or location fetch failed - require manual entry
+      if (errorMessage.includes('Network') || errorMessage.includes('NETWORK_UNAVAILABLE')) {
+        addAIMessage(
+          "I can't connect to the network to fetch your location. Please enter your city name manually."
+        );
+      } else {
+        // Other errors (permission denied, etc.)
+        addAIMessage(
+          "I couldn't get your location from your device. Please enter your city name manually."
+        );
+      }
+      
+      // Switch to text input mode for location - REQUIRED
+      // Location button will be hidden now
       setTimeout(() => {
-        setOnboardingData((prev) => ({
-          ...prev,
-          climate: 'mild',
-        }));
-        setCurrentStep(OnboardingStep.ASK_WEIGHT);
-        addAIMessage("What is your weight in kg?");
-      }, 2000);
+        setCurrentStep(OnboardingStep.ASK_LOCATION);
+      }, 1500);
     } finally {
       setIsProcessing(false);
     }
   };
 
+  // Handle weight unit selection
+  const handleWeightUnitSelect = (unit: WeightUnit) => {
+    setWeightUnit(unit);
+    // Update the AI message to reflect unit system
+    if (messages.length > 0 && currentStep === OnboardingStep.ASK_WEIGHT) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === 'assistant' && lastMessage.content.includes('weight')) {
+        // Update the last message to show the unit system
+        const updatedMessages = [...messages];
+        updatedMessages[updatedMessages.length - 1] = {
+          ...lastMessage,
+          content: unit === 'lbs' 
+            ? "What is your weight? (Imperial system will be used throughout)"
+            : "What is your weight? (Metric system will be used throughout)",
+        };
+        setMessages(updatedMessages);
+      }
+    }
+  };
+
   // Handle weight input
   const handleWeight = async (value: string | number) => {
-    const weight = typeof value === 'number' ? value : parseFloat(value);
-    addUserMessage(`${weight} kg`);
-    setOnboardingData((prev) => ({ ...prev, weight }));
+    let weight = typeof value === 'number' ? value : parseFloat(value);
+    
+    // Convert to kg if user entered lbs (store everything in kg internally)
+    if (weightUnit === 'lbs') {
+      weight = weight * 0.453592; // Convert lbs to kg
+    }
+    
+    const displayWeight = weightUnit === 'lbs' 
+      ? (typeof value === 'number' ? value : parseFloat(value))
+      : weight;
+    
+    addUserMessage(`${displayWeight} ${weightUnit}`);
+    setOnboardingData((prev) => ({ ...prev, weight, weightUnit }));
 
     await simulateTyping(800);
     setCurrentStep(OnboardingStep.ASK_AGE);
-    addAIMessage("What is your age?");
+    // Age is unit-agnostic, but we can mention the system
+    const ageMessage = weightUnit === 'lbs'
+      ? "What is your age? (Continuing with imperial system)"
+      : "What is your age? (Continuing with metric system)";
+    addAIMessage(ageMessage);
   };
 
   // Handle age input
@@ -305,12 +394,74 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
 
     const baseCalc = onboardingData.weight! * 32;
 
-    const summary = `Perfect! Based on your profile, here's your personalized hydration plan:\n\n` +
-      `Base: ${baseCalc} ml (${onboardingData.weight} kg × 32 ml/kg)\n` +
-      `Activity bonus: ${activityBonus >= 0 ? '+' : ''}${activityBonus} ml (${onboardingData.activity} activity)\n` +
-      `Climate adjustment: ${climateBonus >= 0 ? '+' : ''}${climateBonus} ml (${onboardingData.climate} climate)\n\n` +
-      `Daily Goal: ${dailyGoalML} ml\n\n` +
-      `I'll remind you every ${frequency} minutes between ${onboardingData.wakeTime} and ${onboardingData.sleepTime}.`;
+    // Calculate reminder schedule to show per-interval amounts
+    const reminderSchedule = computeReminderSchedule(
+      onboardingData.wakeTime!,
+      onboardingData.sleepTime!,
+      frequency,
+      dailyGoalML
+    );
+
+    // Format per-interval information based on selected unit system
+    const isImperial = onboardingData.weightUnit === 'lbs';
+    
+    const formatAmount = (ml: number): string => {
+      if (isImperial) {
+        const flOz = ml * 0.033814; // Convert ml to fl oz
+        if (flOz >= 1) {
+          return `${flOz.toFixed(1)} fl oz`;
+        }
+        return `${flOz.toFixed(2)} fl oz`;
+      }
+      return formatMilliliters(ml);
+    };
+
+    const formatWeight = (kg: number): string => {
+      if (isImperial) {
+        const lbs = kg / 0.453592;
+        return `${lbs.toFixed(1)} lbs`;
+      }
+      return `${kg.toFixed(1)} kg`;
+    };
+
+    const formatDailyGoal = (ml: number): string => {
+      if (isImperial) {
+        const flOz = ml * 0.033814;
+        if (flOz >= 128) {
+          const gallons = flOz / 128;
+          return `${gallons.toFixed(2)} gallons (${Math.round(flOz)} fl oz)`;
+        }
+        return `${Math.round(flOz)} fl oz`;
+      }
+      return formatMilliliters(ml);
+    };
+
+    const formatBaseCalc = (ml: number, weightKg: number): string => {
+      if (isImperial) {
+        const weightLbs = weightKg / 0.453592;
+        const flOz = ml * 0.033814;
+        return `${formatAmount(ml)} (${weightLbs.toFixed(1)} lbs × 32 ml/kg)`;
+      }
+      return `${ml} ml (${weightKg.toFixed(1)} kg × 32 ml/kg)`;
+    };
+
+    // Build summary with per-interval amounts using consistent unit system
+    let summary = `Perfect! Based on your profile, here's your personalized hydration plan:\n\n`;
+    
+    // Use consistent unit system throughout
+    summary += `Base: ${formatBaseCalc(baseCalc, onboardingData.weight!)}\n`;
+    summary += `Activity bonus: ${activityBonus >= 0 ? '+' : ''}${formatAmount(activityBonus)} (${onboardingData.activity} activity)\n`;
+    summary += `Climate adjustment: ${climateBonus >= 0 ? '+' : ''}${formatAmount(climateBonus)} (${onboardingData.climate} climate)\n\n`;
+    summary += `Daily Goal: ${formatDailyGoal(dailyGoalML)}\n\n`;
+
+    summary += `I'll remind you every ${frequency} minutes between ${onboardingData.wakeTime} and ${onboardingData.sleepTime}.\n\n`;
+    
+    if (reminderSchedule.length > 0) {
+      summary += `Here's your reminder schedule:\n`;
+      reminderSchedule.forEach((reminder) => {
+        summary += `• ${reminder.time}: ${formatAmount(reminder.amountML)}\n`;
+      });
+    }
 
     addAIMessage(summary);
 
@@ -334,6 +485,7 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
       // Save settings to context
       await updateSettings({
         weight: onboardingData.weight!,
+        weightUnit: onboardingData.weightUnit || 'kg',
         age: onboardingData.age!,
         activity: onboardingData.activity!,
         climate: onboardingData.climate!,
@@ -373,17 +525,49 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
             variant="location"
             placeholder="Enter your city..."
             onSubmit={handleLocationText}
-            onLocationRequest={handleLocationRequest}
+            onLocationRequest={deviceLocationFailed ? undefined : handleLocationRequest}
           />
         );
 
       case OnboardingStep.ASK_WEIGHT:
         return (
-          <ChatInput
-            variant="number"
-            placeholder="Enter weight in kg..."
-            onSubmit={handleWeight}
-          />
+          <View style={styles.weightInputContainer}>
+            <View style={styles.weightUnitSelector}>
+              <TouchableOpacity
+                style={[
+                  styles.weightUnitButton,
+                  weightUnit === 'kg' && styles.weightUnitButtonActive
+                ]}
+                onPress={() => handleWeightUnitSelect('kg')}
+              >
+                <Text style={[
+                  styles.weightUnitButtonText,
+                  weightUnit === 'kg' && styles.weightUnitButtonTextActive
+                ]}>
+                  Kilograms (kg)
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.weightUnitButton,
+                  weightUnit === 'lbs' && styles.weightUnitButtonActive
+                ]}
+                onPress={() => handleWeightUnitSelect('lbs')}
+              >
+                <Text style={[
+                  styles.weightUnitButtonText,
+                  weightUnit === 'lbs' && styles.weightUnitButtonTextActive
+                ]}>
+                  Pounds (lbs)
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <ChatInput
+              variant="number"
+              placeholder={`Enter weight in ${weightUnit}...`}
+              onSubmit={handleWeight}
+            />
+          </View>
         );
 
       case OnboardingStep.ASK_AGE:
@@ -510,5 +694,40 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '700',
+  },
+  weightInputContainer: {
+    backgroundColor: '#F5F5F5',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  weightUnitSelector: {
+    flexDirection: 'row',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  weightUnitButton: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    alignItems: 'center',
+  },
+  weightUnitButtonActive: {
+    borderColor: '#1976D2',
+    backgroundColor: '#E3F2FD',
+  },
+  weightUnitButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#757575',
+  },
+  weightUnitButtonTextActive: {
+    color: '#1976D2',
+    fontWeight: '600',
   },
 });
