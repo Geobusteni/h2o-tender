@@ -1,5 +1,18 @@
 const functions = require('firebase-functions');
-const cors = require('cors')({ origin: true });
+
+// Configure CORS with specific allowed origins for security
+// For mobile apps using Firebase callable functions, CORS is handled automatically
+// This CORS config is only for HTTP endpoints like healthCheck
+const cors = require('cors')({
+  origin: [
+    'http://localhost:8081',  // Expo dev server
+    'http://localhost:19006', // Expo web
+    'http://localhost:19000', // Expo Metro bundler
+    /^https:\/\/.*\.firebaseapp\.com$/,  // Firebase hosting
+    /^https:\/\/.*\.web\.app$/,           // Firebase hosting custom domains
+  ],
+  credentials: true,
+});
 
 /**
  * HTTPS Callable Cloud Function for AI hydration assistance

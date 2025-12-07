@@ -29,7 +29,7 @@ export function QuickAddModal({
   visible,
   onClose,
   onAdd,
-}: QuickAddModalProps): JSX.Element {
+}: QuickAddModalProps): React.ReactElement {
   const [amount, setAmount] = useState<string>('');
   const [error, setError] = useState<string>('');
 

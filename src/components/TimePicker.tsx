@@ -25,7 +25,7 @@ export function TimePicker({
   value,
   onChange,
   label,
-}: TimePickerProps): JSX.Element {
+}: TimePickerProps): React.ReactElement {
   const [showPicker, setShowPicker] = useState(false);
 
   // Convert "HH:MM" string to Date object

@@ -39,7 +39,7 @@ interface AppProviderProps {
  * App Context Provider
  * Wraps the app and provides global state and actions
  */
-export function AppProvider({ children }: AppProviderProps): JSX.Element {
+export function AppProvider({ children }: AppProviderProps): React.ReactElement {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [dailyState, setDailyState] = useState<DailyState | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -284,7 +284,7 @@ export function AppProvider({ children }: AppProviderProps): JSX.Element {
       await NotificationService.cancelAllReminders();
       console.log('Skipped reminder. No remaining reminders for today.');
     }
-  }, [settings, dailyState, skipReminder]);
+  }, [settings, dailyState]);
 
   /**
    * Set up notification response listener
