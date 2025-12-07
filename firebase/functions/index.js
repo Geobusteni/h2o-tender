@@ -9,27 +9,45 @@ const cors = require('cors')({ origin: true });
  *
  * Setup Instructions:
  * 1. Choose your LLM provider (OpenAI or Anthropic)
- * 2. Add your API key to Firebase config:
- *    firebase functions:config:set openai.key="YOUR_API_KEY"
- *    OR
- *    firebase functions:config:set anthropic.key="YOUR_API_KEY"
- * 3. Uncomment the appropriate implementation below
+ * 2. Add your API key using ONE of these methods:
+ *    
+ *    Option A - Blaze Plan (Recommended):
+ *    firebase functions:secrets:set OPENAI_API_KEY
+ *    
+ *    Option B - Environment Variables (Works on all plans):
+ *    Create .env file in firebase/functions/ with: OPENAI_API_KEY=your_key_here
+ *    Or set via: firebase functions:config:set env.OPENAI_API_KEY="YOUR_API_KEY"
+ * 
+ * 3. The OpenAI implementation is active by default
  * 4. Deploy: firebase deploy --only functions
+ * 
+ * Note: functions.config() is deprecated. Use environment variables instead.
  */
 
-// TODO: Uncomment ONE of the following implementations
-
 // ============================================================================
-// OPTION 1: OpenAI Implementation
+// OPTION 1: OpenAI Implementation (Active)
 // ============================================================================
-/*
-const { Configuration, OpenAIApi } = require('openai');
+const OpenAI = require('openai');
 
-// Initialize OpenAI
-const configuration = new Configuration({
-  apiKey: functions.config().openai.key,
-});
-const openai = new OpenAIApi(configuration);
+// Initialize OpenAI client - uses Firebase Secrets (Blaze plan)
+// Set secret: firebase functions:secrets:set OPENAI_API_KEY
+function getOpenAIClient() {
+  // Get API key from Firebase Secrets (Blaze plan)
+  // Secrets are automatically available as environment variables
+  const apiKey = process.env.OPENAI_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error(
+      'OPENAI_API_KEY not configured. Set it using:\n' +
+      '  firebase functions:secrets:set OPENAI_API_KEY\n' +
+      'Then redeploy: firebase deploy --only functions'
+    );
+  }
+  
+  return new OpenAI({
+    apiKey: apiKey,
+  });
+}
 
 exports.hydrationAiProxy = functions.https.onCall(async (data, context) => {
   // Validate input
@@ -41,7 +59,8 @@ exports.hydrationAiProxy = functions.https.onCall(async (data, context) => {
   }
 
   try {
-    const completion = await openai.createChatCompletion({
+    const openai = getOpenAIClient();
+    const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo', // or 'gpt-4' for better responses
       messages: [
         {
@@ -57,7 +76,7 @@ exports.hydrationAiProxy = functions.https.onCall(async (data, context) => {
       temperature: 0.7,
     });
 
-    const response = completion.data.choices[0].message.content;
+    const response = completion.choices[0].message.content;
 
     // Log for debugging (optional)
     console.log('AI Request:', data.prompt);
@@ -73,7 +92,6 @@ exports.hydrationAiProxy = functions.https.onCall(async (data, context) => {
     );
   }
 });
-*/
 
 // ============================================================================
 // OPTION 2: Anthropic Claude Implementation
@@ -127,9 +145,10 @@ exports.hydrationAiProxy = functions.https.onCall(async (data, context) => {
 */
 
 // ============================================================================
-// OPTION 3: Simple Mock Implementation (for testing)
+// OPTION 3: Simple Mock Implementation (for testing) - DISABLED
 // ============================================================================
-
+/*
+// Mock implementation - uncomment only for testing without API key
 exports.hydrationAiProxy = functions.https.onCall(async (data, context) => {
   // Validate input
   if (!data.prompt || typeof data.prompt !== 'string') {
@@ -155,6 +174,7 @@ exports.hydrationAiProxy = functions.https.onCall(async (data, context) => {
 
   return { response };
 });
+*/
 
 // ============================================================================
 // Additional Helper Functions

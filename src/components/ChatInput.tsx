@@ -61,12 +61,17 @@ export function ChatInput({
     }
 
     if (date) {
+      // Only update the selected time, don't submit yet
       setSelectedTime(date);
-      const hours = date.getHours().toString().padStart(2, '0');
-      const minutes = date.getMinutes().toString().padStart(2, '0');
-      const timeString = `${hours}:${minutes}`;
-      onSubmit(timeString);
     }
+  };
+
+  const handleTimeSubmit = () => {
+    const hours = selectedTime.getHours().toString().padStart(2, '0');
+    const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
+    const timeString = `${hours}:${minutes}`;
+    onSubmit(timeString);
+    setShowTimePicker(false);
   };
 
   // Render text input variant
@@ -179,21 +184,33 @@ export function ChatInput({
 
   // Render time picker
   if (variant === 'time') {
+    const isPickerVisible = showTimePicker || Platform.OS === 'ios';
+    
     return (
-      <View style={styles.container}>
-        <TouchableOpacity
-          style={styles.timePickerButton}
-          onPress={() => setShowTimePicker(true)}
-        >
-          <Text style={styles.timePickerButtonText}>Select Time</Text>
-        </TouchableOpacity>
-        {(showTimePicker || Platform.OS === 'ios') && (
-          <DateTimePicker
-            value={selectedTime}
-            mode="time"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={handleTimeChange}
-          />
+      <View style={styles.timePickerContainer}>
+        {!isPickerVisible && (
+          <TouchableOpacity
+            style={styles.timePickerOpenButton}
+            onPress={() => setShowTimePicker(true)}
+          >
+            <Text style={styles.timePickerOpenButtonText}>Select Time</Text>
+          </TouchableOpacity>
+        )}
+        {isPickerVisible && (
+          <View style={styles.timePickerWrapper}>
+            <DateTimePicker
+              value={selectedTime}
+              mode="time"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleTimeChange}
+            />
+            <TouchableOpacity
+              style={styles.timePickerSubmitButton}
+              onPress={handleTimeSubmit}
+            >
+              <Text style={styles.timePickerSubmitButtonText}>Confirm Time</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     );
@@ -302,16 +319,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#757575',
   },
-  timePickerButton: {
-    flex: 1,
+  timePickerContainer: {
+    backgroundColor: '#F5F5F5',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    paddingVertical: 12,
+  },
+  timePickerOpenButton: {
     backgroundColor: '#1976D2',
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginHorizontal: 12,
+    marginBottom: 12,
   },
-  timePickerButtonText: {
+  timePickerOpenButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  timePickerWrapper: {
+    paddingHorizontal: 12,
+  },
+  timePickerSubmitButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  timePickerSubmitButtonText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
