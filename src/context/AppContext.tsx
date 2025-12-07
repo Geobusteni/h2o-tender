@@ -162,10 +162,15 @@ export function AppProvider({ children }: AppProviderProps): React.ReactElement 
       const newConsumed = dailyState.consumedML + amountML;
       const newRemaining = Math.max(0, settings.dailyGoalML - newConsumed);
 
+      // Track timestamp of this addition
+      const now = Date.now();
+      const updatedTimestamps = [...dailyState.waterAdditionTimestamps, now];
+
       const updatedState: DailyState = {
         ...dailyState,
         consumedML: newConsumed,
         remainingML: newRemaining,
+        waterAdditionTimestamps: updatedTimestamps,
       };
 
       await saveDailyState(updatedState);
