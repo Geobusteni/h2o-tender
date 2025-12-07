@@ -5,8 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
     "splash": {
-      "backgroundColor": "#ffffff"
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4A90E2"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -29,7 +32,8 @@
     "android": {
       "package": "com.h2otender.app",
       "adaptiveIcon": {
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4A90E2"
       },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
