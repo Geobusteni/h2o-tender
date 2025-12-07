@@ -12,7 +12,7 @@ interface ChatBubbleProps {
   isAI: boolean;
 }
 
-export function ChatBubble({ message, isAI }: ChatBubbleProps): JSX.Element {
+export function ChatBubble({ message, isAI }: ChatBubbleProps): React.ReactElement {
   return (
     <View style={[styles.container, isAI ? styles.aiContainer : styles.userContainer]}>
       <View style={[styles.bubble, isAI ? styles.aiBubble : styles.userBubble]}>

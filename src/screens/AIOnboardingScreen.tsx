@@ -70,7 +70,7 @@ interface OnboardingData {
   reminderFrequency?: ReminderFrequency;
 }
 
-export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX.Element {
+export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): React.ReactElement {
   const { settings, updateSettings } = useApp();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(OnboardingStep.WELCOME);

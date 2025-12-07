@@ -29,7 +29,7 @@ interface SettingsScreenProps {
   navigation?: any;
 }
 
-export function SettingsScreen({ navigation }: SettingsScreenProps): JSX.Element {
+export function SettingsScreen({ navigation }: SettingsScreenProps): React.ReactElement {
   const { settings, updateSettings } = useApp();
 
   // Local state for immediate UI updates

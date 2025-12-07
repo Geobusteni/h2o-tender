@@ -39,7 +39,7 @@ export function ChatInput({
   onSubmit,
   onLocationRequest,
   timeType,
-}: ChatInputProps): JSX.Element {
+}: ChatInputProps): React.ReactElement {
   const [textValue, setTextValue] = useState('');
   const [showTimePicker, setShowTimePicker] = useState(false);
 

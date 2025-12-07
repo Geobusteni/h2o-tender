@@ -33,7 +33,7 @@ interface HomeScreenProps {
  * HomeScreen Component
  * Main dashboard showing hydration progress and controls
  */
-export function HomeScreen({ navigation }: HomeScreenProps): JSX.Element {
+export function HomeScreen({ navigation }: HomeScreenProps): React.ReactElement {
   const {
     settings,
     dailyState,

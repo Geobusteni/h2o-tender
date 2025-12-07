@@ -28,7 +28,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 /**
  * App Navigator - handles screen routing based on onboarding state
  */
-function AppNavigator(): JSX.Element {
+function AppNavigator(): React.ReactElement {
   const { settings, isLoading, error } = useApp();
 
   // Set up notification listeners on mount
@@ -94,7 +94,7 @@ function AppNavigator(): JSX.Element {
 /**
  * Root App Component
  */
-export default function App(): JSX.Element {
+export default function App(): React.ReactElement {
   return (
     <AppProvider>
       <AppNavigator />

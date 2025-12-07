@@ -39,7 +39,7 @@ interface AppProviderProps {
  * App Context Provider
  * Wraps the app and provides global state and actions
  */
-export function AppProvider({ children }: AppProviderProps): JSX.Element {
+export function AppProvider({ children }: AppProviderProps): React.ReactElement {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [dailyState, setDailyState] = useState<DailyState | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
