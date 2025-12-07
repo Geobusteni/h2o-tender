@@ -284,7 +284,7 @@ export function AppProvider({ children }: AppProviderProps): JSX.Element {
       await NotificationService.cancelAllReminders();
       console.log('Skipped reminder. No remaining reminders for today.');
     }
-  }, [settings, dailyState, skipReminder]);
+  }, [settings, dailyState]);
 
   /**
    * Set up notification response listener

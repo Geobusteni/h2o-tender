@@ -149,9 +149,84 @@ export function HomeScreen({ navigation }: HomeScreenProps): JSX.Element {
   const handleShowExplanation = () => {
     if (!settings) return;
 
+    // Generate detailed summary similar to onboarding
+    const isImperial = settings.weightUnit === 'lbs';
+
+    // Calculate components
+    const baseCalc = settings.weight * 32;
+
+    const activityBonus = {
+      none: 0,
+      light: 200,
+      moderate: 500,
+      heavy: 800,
+    }[settings.activity];
+
+    const climateBonus = {
+      cold: -200,
+      mild: 0,
+      hot: 300,
+      veryHot: 500,
+    }[settings.climate];
+
+    // Helper formatting functions
+    const formatAmount = (ml: number): string => {
+      if (isImperial) {
+        const flOz = ml * 0.033814;
+        if (flOz >= 1) {
+          return `${flOz.toFixed(1)} fl oz`;
+        }
+        return `${flOz.toFixed(2)} fl oz`;
+      }
+      return formatMilliliters(ml);
+    };
+
+    const formatDailyGoal = (ml: number): string => {
+      if (isImperial) {
+        const flOz = ml * 0.033814;
+        if (flOz >= 128) {
+          const gallons = flOz / 128;
+          return `${gallons.toFixed(2)} gallons (${Math.round(flOz)} fl oz)`;
+        }
+        return `${Math.round(flOz)} fl oz`;
+      }
+      return formatMilliliters(ml);
+    };
+
+    const formatBaseCalc = (ml: number, weightKg: number): string => {
+      if (isImperial) {
+        const weightLbs = weightKg / 0.453592;
+        return `${formatAmount(ml)} (${weightLbs.toFixed(1)} lbs × 32 ml/kg)`;
+      }
+      return `${ml} ml (${weightKg.toFixed(1)} kg × 32 ml/kg)`;
+    };
+
+    // Calculate reminder schedule
+    const reminderSchedule = computeReminderSchedule(
+      settings.wakeTime,
+      settings.sleepTime,
+      settings.reminderFrequency,
+      settings.dailyGoalML
+    );
+
+    // Build detailed summary
+    let summary = `Based on your profile, here's your personalized hydration plan:\n\n`;
+    summary += `Base: ${formatBaseCalc(baseCalc, settings.weight)}\n`;
+    summary += `Activity bonus: ${activityBonus >= 0 ? '+' : ''}${formatAmount(activityBonus)} (${settings.activity} activity)\n`;
+    summary += `Climate adjustment: ${climateBonus >= 0 ? '+' : ''}${formatAmount(climateBonus)} (${settings.climate} climate)\n\n`;
+    summary += `Daily Goal: ${formatDailyGoal(settings.dailyGoalML)}\n\n`;
+    summary += `Reminders: Every ${settings.reminderFrequency} minutes between ${settings.wakeTime} and ${settings.sleepTime}\n\n`;
+
+    if (reminderSchedule.length > 0) {
+      summary += `Schedule (${reminderSchedule.length} reminders):\n`;
+      reminderSchedule.forEach((reminder) => {
+        summary += `• ${reminder.time}: ${formatAmount(reminder.amountML)}\n`;
+      });
+    }
+
     Alert.alert(
       'Your Hydration Plan',
-      settings.aiProfileSummary || 'No profile summary available.',
+      summary,
       [{ text: 'OK' }]
     );
   };

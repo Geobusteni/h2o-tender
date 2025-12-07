@@ -23,11 +23,14 @@ type InputVariant =
   | 'time'
   | 'location';
 
+type TimeType = 'wake' | 'sleep';
+
 interface ChatInputProps {
   variant: InputVariant;
   placeholder?: string;
   onSubmit: (value: string | number | ActivityLevel | ReminderFrequency) => void;
   onLocationRequest?: () => void;
+  timeType?: TimeType; // For time variant: 'wake' or 'sleep'
 }
 
 export function ChatInput({
@@ -35,10 +38,25 @@ export function ChatInput({
   placeholder,
   onSubmit,
   onLocationRequest,
+  timeType,
 }: ChatInputProps): JSX.Element {
   const [textValue, setTextValue] = useState('');
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [selectedTime, setSelectedTime] = useState(new Date());
+
+  // Set sensible default times based on timeType
+  const getDefaultTime = (): Date => {
+    const now = new Date();
+    if (timeType === 'wake') {
+      // Default wake time: 6:30 AM
+      now.setHours(6, 30, 0, 0);
+    } else if (timeType === 'sleep') {
+      // Default sleep time: 10:30 PM
+      now.setHours(22, 30, 0, 0);
+    }
+    return now;
+  };
+
+  const [selectedTime, setSelectedTime] = useState(getDefaultTime());
 
   const handleTextSubmit = () => {
     if (textValue.trim()) {
