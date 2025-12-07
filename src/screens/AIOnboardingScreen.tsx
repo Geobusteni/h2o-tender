@@ -417,14 +417,6 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
       return formatMilliliters(ml);
     };
 
-    const formatWeight = (kg: number): string => {
-      if (isImperial) {
-        const lbs = kg / 0.453592;
-        return `${lbs.toFixed(1)} lbs`;
-      }
-      return `${kg.toFixed(1)} kg`;
-    };
-
     const formatDailyGoal = (ml: number): string => {
       if (isImperial) {
         const flOz = ml * 0.033814;
@@ -440,7 +432,6 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
     const formatBaseCalc = (ml: number, weightKg: number): string => {
       if (isImperial) {
         const weightLbs = weightKg / 0.453592;
-        const flOz = ml * 0.033814;
         return `${formatAmount(ml)} (${weightLbs.toFixed(1)} lbs × 32 ml/kg)`;
       }
       return `${ml} ml (${weightKg.toFixed(1)} kg × 32 ml/kg)`;
