@@ -75,6 +75,12 @@ export async function loadDailyState(date?: string): Promise<DailyState> {
     }
 
     const state = JSON.parse(json) as DailyState;
+
+    // Ensure backward compatibility: add waterAdditionTimestamps if missing
+    if (!state.waterAdditionTimestamps) {
+      state.waterAdditionTimestamps = [];
+    }
+
     return state;
   } catch (error) {
     console.error(`Error loading daily state for ${targetDate}:`, error);

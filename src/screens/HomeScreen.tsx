@@ -75,11 +75,52 @@ export function HomeScreen({ navigation }: HomeScreenProps): React.ReactElement 
   }, [settings, dailyState]);
 
   /**
+   * Check if user is adding water too rapidly
+   * Returns true if 3+ additions within last 10 minutes
+   */
+  const checkRapidIntake = (): boolean => {
+    if (!dailyState) return false;
+
+    const now = Date.now();
+    const tenMinutesAgo = now - 10 * 60 * 1000; // 10 minutes in milliseconds
+
+    // Count additions within last 10 minutes (including current one)
+    const recentAdditions = dailyState.waterAdditionTimestamps.filter(
+      (timestamp) => timestamp >= tenMinutesAgo
+    );
+
+    // Return true if this will be the 3rd addition in 10 minutes
+    return recentAdditions.length >= 2;
+  };
+
+  /**
+   * Show overhydration warning
+   */
+  const showOverhydrationWarning = () => {
+    Alert.alert(
+      'Drinking Too Fast?',
+      'You\'ve added water 3 times in the last 10 minutes. While staying hydrated is important, drinking too much water too quickly can dilute sodium levels in your blood (hyponatremia), which can be harmful.\n\n' +
+      'For best results, pace your water intake throughout the day. Consider waiting a few minutes before adding more water.',
+      [
+        { text: 'Got It', style: 'default' }
+      ]
+    );
+  };
+
+  /**
    * Handle quick-add button press
    */
   const handleQuickAdd = async (amountML: number) => {
     try {
+      // Check for rapid intake before recording
+      const isRapidIntake = checkRapidIntake();
+
       await recordConsumption(amountML);
+
+      // Show warning after successful recording if needed
+      if (isRapidIntake) {
+        showOverhydrationWarning();
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to record water consumption');
     }
@@ -90,7 +131,15 @@ export function HomeScreen({ navigation }: HomeScreenProps): React.ReactElement 
    */
   const handleCustomAdd = async (amountML: number) => {
     try {
+      // Check for rapid intake before recording
+      const isRapidIntake = checkRapidIntake();
+
       await recordConsumption(amountML);
+
+      // Show warning after successful recording if needed
+      if (isRapidIntake) {
+        showOverhydrationWarning();
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to record water consumption');
     }
