@@ -109,9 +109,51 @@ export function AppProvider({ children }: AppProviderProps): JSX.Element {
   }, [dailyState, settings]);
 
   /**
+   * Update user settings
+   */
+  const updateSettings = useCallback(async (updates: Partial<UserSettings>): Promise<void> => {
+    try {
+      if (!settings) {
+        throw new Error('Settings not loaded');
+      }
+
+      const newSettings = { ...settings, ...updates };
+
+      // Recalculate daily goal if relevant fields changed
+      if (
+        updates.weight !== undefined ||
+        updates.climate !== undefined ||
+        updates.activity !== undefined
+      ) {
+        newSettings.dailyGoalML = calculateDailyGoal(
+          newSettings.weight,
+          newSettings.climate,
+          newSettings.activity
+        );
+      }
+
+      await saveSettings(newSettings);
+      setSettings(newSettings);
+
+      // Update daily state remaining if goal changed
+      if (dailyState && updates.dailyGoalML) {
+        const updatedDailyState = {
+          ...dailyState,
+          remainingML: updates.dailyGoalML - dailyState.consumedML,
+        };
+        await saveDailyState(updatedDailyState);
+        setDailyState(updatedDailyState);
+      }
+    } catch (err) {
+      console.error('Error updating settings:', err);
+      throw new Error('Failed to update settings');
+    }
+  }, [settings, dailyState]);
+
+  /**
    * Record water consumption
    */
-  const recordConsumption = async (amountML: number): Promise<void> => {
+  const recordConsumption = useCallback(async (amountML: number): Promise<void> => {
     try {
       if (!dailyState || !settings) {
         throw new Error('State not loaded');
@@ -132,12 +174,12 @@ export function AppProvider({ children }: AppProviderProps): JSX.Element {
       console.error('Error recording consumption:', err);
       throw new Error('Failed to record consumption');
     }
-  };
+  }, [dailyState, settings]);
 
   /**
    * Mark current reminder as skipped
    */
-  const skipReminder = async (): Promise<void> => {
+  const skipReminder = useCallback(async (): Promise<void> => {
     try {
       if (!dailyState) {
         throw new Error('State not loaded');
@@ -154,12 +196,12 @@ export function AppProvider({ children }: AppProviderProps): JSX.Element {
       console.error('Error skipping reminder:', err);
       throw new Error('Failed to skip reminder');
     }
-  };
+  }, [dailyState]);
 
   /**
    * Mark current reminder as completed
    */
-  const completeReminder = async (): Promise<void> => {
+  const completeReminder = useCallback(async (): Promise<void> => {
     try {
       if (!dailyState) {
         throw new Error('State not loaded');
@@ -176,7 +218,7 @@ export function AppProvider({ children }: AppProviderProps): JSX.Element {
       console.error('Error completing reminder:', err);
       throw new Error('Failed to complete reminder');
     }
-  };
+  }, [dailyState]);
 
   /**
    * Handle skip action from notification
@@ -281,118 +323,6 @@ export function AppProvider({ children }: AppProviderProps): JSX.Element {
       subscription.remove();
     };
   }, [settings, dailyState, handleSkipFromNotification, recordConsumption, completeReminder]);
-
-  /**
-   * Update user settings
-   */
-  const updateSettings = async (updates: Partial<UserSettings>): Promise<void> => {
-    try {
-      if (!settings) {
-        throw new Error('Settings not loaded');
-      }
-
-      const newSettings = { ...settings, ...updates };
-
-      // Recalculate daily goal if relevant fields changed
-      if (
-        updates.weight !== undefined ||
-        updates.climate !== undefined ||
-        updates.activity !== undefined
-      ) {
-        newSettings.dailyGoalML = calculateDailyGoal(
-          newSettings.weight,
-          newSettings.climate,
-          newSettings.activity
-        );
-      }
-
-      await saveSettings(newSettings);
-      setSettings(newSettings);
-
-      // Update daily state remaining if goal changed
-      if (dailyState && updates.dailyGoalML) {
-        const updatedDailyState = {
-          ...dailyState,
-          remainingML: updates.dailyGoalML - dailyState.consumedML,
-        };
-        await saveDailyState(updatedDailyState);
-        setDailyState(updatedDailyState);
-      }
-    } catch (err) {
-      console.error('Error updating settings:', err);
-      throw new Error('Failed to update settings');
-    }
-  };
-
-  /**
-   * Record water consumption
-   */
-  const recordConsumption = async (amountML: number): Promise<void> => {
-    try {
-      if (!dailyState || !settings) {
-        throw new Error('State not loaded');
-      }
-
-      const newConsumed = dailyState.consumedML + amountML;
-      const newRemaining = Math.max(0, settings.dailyGoalML - newConsumed);
-
-      const updatedState: DailyState = {
-        ...dailyState,
-        consumedML: newConsumed,
-        remainingML: newRemaining,
-      };
-
-      await saveDailyState(updatedState);
-      setDailyState(updatedState);
-    } catch (err) {
-      console.error('Error recording consumption:', err);
-      throw new Error('Failed to record consumption');
-    }
-  };
-
-  /**
-   * Mark current reminder as skipped
-   */
-  const skipReminder = async (): Promise<void> => {
-    try {
-      if (!dailyState) {
-        throw new Error('State not loaded');
-      }
-
-      const updatedState: DailyState = {
-        ...dailyState,
-        remindersSkipped: dailyState.remindersSkipped + 1,
-      };
-
-      await saveDailyState(updatedState);
-      setDailyState(updatedState);
-    } catch (err) {
-      console.error('Error skipping reminder:', err);
-      throw new Error('Failed to skip reminder');
-    }
-  };
-
-  /**
-   * Mark current reminder as completed
-   */
-  const completeReminder = async (): Promise<void> => {
-    try {
-      if (!dailyState) {
-        throw new Error('State not loaded');
-      }
-
-      const updatedState: DailyState = {
-        ...dailyState,
-        remindersCompleted: dailyState.remindersCompleted + 1,
-      };
-
-      await saveDailyState(updatedState);
-      setDailyState(updatedState);
-    } catch (err) {
-      console.error('Error completing reminder:', err);
-      throw new Error('Failed to complete reminder');
-    }
-  };
 
   /**
    * Reset daily state (for debugging or manual reset)

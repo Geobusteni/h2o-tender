@@ -30,7 +30,7 @@ export class AIService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
 
-      const response = await fetch(this.CLOUD_FUNCTION_URL, {
+      await fetch(this.CLOUD_FUNCTION_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,7 +40,7 @@ export class AIService {
       });
 
       clearTimeout(timeoutId);
-      
+
       // Even if we get an error response, network is available
       return true;
     } catch (error) {
