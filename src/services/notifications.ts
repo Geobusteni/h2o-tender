@@ -41,6 +41,8 @@ export class NotificationService {
           shouldShowAlert: true,
           shouldPlaySound: true,
           shouldSetBadge: false,
+          shouldShowBanner: true,
+          shouldShowList: true,
         }),
       });
 
@@ -180,7 +182,8 @@ export class NotificationService {
     onSkip: () => void
   ): void {
     const { actionIdentifier, notification } = response;
-    const { mlAmount } = notification.request.content.data;
+    const data = notification.request.content.data as { mlAmount?: number };
+    const mlAmount = data.mlAmount ?? 0;
 
     switch (actionIdentifier) {
       case this.ACTION_DRINK_NOW:
