@@ -91,16 +91,7 @@ export class AIService {
    * }
    */
   private static async serverProxyAsk(prompt: string): Promise<string> {
-    // TODO: Initialize Firebase if not already done
-    // import { getFunctions, httpsCallable } from 'firebase/functions';
-    // const functions = getFunctions();
-    // const hydrationAiProxy = httpsCallable(functions, 'hydrationAiProxy');
-
     try {
-      // TODO: Replace with actual Firebase callable function
-      // const result = await hydrationAiProxy({ prompt });
-      // return result.data.response;
-
       // Call Firebase callable function via HTTP
       // For callable functions, the request format is: { data: { ... } }
       // Response format is: { result: { ... } }

@@ -22,6 +22,7 @@ import { ChatInput } from '../components/ChatInput';
 import { TypingIndicator } from '../components/TypingIndicator';
 import { useApp } from '../context/AppContext';
 import { AIService } from '../services/ai';
+import { NotificationService } from '../services/notifications';
 import { getCurrentLocation } from '../utils/location';
 import { calculateDailyGoal, computeReminderSchedule, formatMilliliters } from '../utils/hydration';
 import type {
@@ -482,6 +483,14 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
         onboardingData.activity!
       );
 
+      // Calculate reminder schedule
+      const reminderSchedule = computeReminderSchedule(
+        onboardingData.wakeTime!,
+        onboardingData.sleepTime!,
+        onboardingData.reminderFrequency!,
+        dailyGoalML
+      );
+
       // Save settings to context
       await updateSettings({
         weight: onboardingData.weight!,
@@ -497,6 +506,24 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
         aiProfileSummary: `${onboardingData.age} years old, ${onboardingData.weight}kg, ${onboardingData.activity} activity, ${onboardingData.climate} climate`,
         onboardingComplete: true,
       });
+
+      // Schedule notifications
+      const notificationSchedule = reminderSchedule.map((reminder) => {
+        const [hour, minute] = reminder.time.split(':').map(Number);
+        return {
+          hour,
+          minute,
+          mlAmount: reminder.amountML,
+        };
+      });
+
+      await NotificationService.scheduleReminders(
+        notificationSchedule,
+        onboardingData.wakeTime!,
+        onboardingData.sleepTime!
+      );
+
+      console.log(`Scheduled ${notificationSchedule.length} hydration reminders`);
 
       // Navigate to home screen
       navigation.replace('Home');

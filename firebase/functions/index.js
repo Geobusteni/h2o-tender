@@ -29,19 +29,18 @@ const cors = require('cors')({ origin: true });
 // ============================================================================
 const OpenAI = require('openai');
 
-// Initialize OpenAI client - uses environment variables (modern approach)
-// Option 1 (Blaze plan): firebase functions:secrets:set OPENAI_API_KEY
-// Option 2 (All plans): Set in .env file or via environment variables
+// Initialize OpenAI client - uses Firebase Secrets (Blaze plan)
+// Set secret: firebase functions:secrets:set OPENAI_API_KEY
 function getOpenAIClient() {
-  // Get API key from environment variable (works with secrets or direct env vars)
+  // Get API key from Firebase Secrets (Blaze plan)
+  // Secrets are automatically available as environment variables
   const apiKey = process.env.OPENAI_API_KEY;
   
   if (!apiKey) {
     throw new Error(
-      'OPENAI_API_KEY not configured. Use one of:\n' +
-      '  Blaze plan: firebase functions:secrets:set OPENAI_API_KEY\n' +
-      '  All plans: Create .env file in firebase/functions/ with OPENAI_API_KEY=your_key\n' +
-      '  Or set environment variable before deployment'
+      'OPENAI_API_KEY not configured. Set it using:\n' +
+      '  firebase functions:secrets:set OPENAI_API_KEY\n' +
+      'Then redeploy: firebase deploy --only functions'
     );
   }
   
