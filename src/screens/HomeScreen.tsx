@@ -71,7 +71,31 @@ export function HomeScreen({ navigation }: HomeScreenProps): React.ReactElement 
       return reminderMinutes > currentMinutes;
     });
 
-    setNextReminder(upcoming || null);
+    // Apply redistribution to calculate updated amount if reminders were skipped
+    if (upcoming) {
+      const totalReminders = schedule.length;
+      const remindersCompleted = dailyState.remindersCompleted;
+      const remindersSkipped = dailyState.remindersSkipped;
+      const remindersLeft = totalReminders - remindersCompleted - remindersSkipped;
+
+      if (remindersLeft > 0 && (remindersSkipped > 0 || remindersCompleted > 0)) {
+        // Recalculate amount based on redistribution
+        const updatedAmount = redistributeOnSkip(
+          settings.dailyGoalML,
+          dailyState.consumedML,
+          remindersLeft
+        );
+
+        setNextReminder({
+          ...upcoming,
+          amountML: updatedAmount,
+        });
+      } else {
+        setNextReminder(upcoming);
+      }
+    } else {
+      setNextReminder(null);
+    }
   }, [settings, dailyState]);
 
   /**
@@ -320,9 +344,17 @@ export function HomeScreen({ navigation }: HomeScreenProps): React.ReactElement 
 
   // Calculate progress
   const progress = dailyState.consumedML / settings.dailyGoalML;
+  const isGoalReached = dailyState.consumedML >= settings.dailyGoalML;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      {/* Congratulations Banner - Show when goal is reached */}
+      {isGoalReached && (
+        <View style={styles.congratsBanner}>
+          <Text style={styles.congratsText}>Hooray! You're the best H2O drinker of the day!</Text>
+        </View>
+      )}
+
       {/* Header Section */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
@@ -371,40 +403,42 @@ export function HomeScreen({ navigation }: HomeScreenProps): React.ReactElement 
         />
       </View>
 
-      {/* Quick Add Buttons */}
-      <View style={styles.quickAddSection}>
-        <Text style={styles.sectionTitle}>Quick Add</Text>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={styles.quickAddButton}
-            onPress={() => handleQuickAdd(100)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.quickAddButtonText}>+100 ml</Text>
-          </TouchableOpacity>
+      {/* Quick Add Buttons - Only show if goal not reached */}
+      {!isGoalReached && (
+        <View style={styles.quickAddSection}>
+          <Text style={styles.sectionTitle}>Quick Add</Text>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.quickAddButton}
+              onPress={() => handleQuickAdd(100)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.quickAddButtonText}>+100 ml</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.quickAddButton}
-            onPress={() => handleQuickAdd(200)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.quickAddButtonText}>+200 ml</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickAddButton}
+              onPress={() => handleQuickAdd(200)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.quickAddButtonText}>+200 ml</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.quickAddButton, styles.customButton]}
-            onPress={() => setShowCustomModal(true)}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.quickAddButtonText, styles.customButtonText]}>
-              +Custom
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickAddButton, styles.customButton]}
+              onPress={() => setShowCustomModal(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.quickAddButtonText, styles.customButtonText]}>
+                +Custom
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
 
-      {/* Next Reminder */}
-      {nextReminder && (
+      {/* Next Reminder - Only show if goal not reached */}
+      {nextReminder && !isGoalReached && (
         <View style={styles.reminderSection}>
           <NextReminderCard
             time={nextReminder.time}
@@ -621,5 +655,22 @@ const styles = StyleSheet.create({
     color: '#333',
     fontSize: 16,
     fontWeight: '600',
+  },
+  congratsBanner: {
+    backgroundColor: '#4CAF50',
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  congratsText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });

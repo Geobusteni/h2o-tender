@@ -175,6 +175,12 @@ export function AppProvider({ children }: AppProviderProps): React.ReactElement 
 
       await saveDailyState(updatedState);
       setDailyState(updatedState);
+
+      // If user reached or exceeded their daily goal, cancel remaining reminders
+      if (newConsumed >= settings.dailyGoalML) {
+        console.log('Daily goal reached! Cancelling remaining reminders.');
+        await NotificationService.cancelAllReminders();
+      }
     } catch (err) {
       console.error('Error recording consumption:', err);
       throw new Error('Failed to record consumption');
