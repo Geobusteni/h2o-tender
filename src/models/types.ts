@@ -22,15 +22,18 @@ export type ReminderFrequency = 60 | 90;
  * User settings and preferences
  * Stored persistently and used to calculate hydration goals
  */
+export type WeightUnit = 'kg' | 'lbs';
+
 export interface UserSettings {
   age?: number; // Optional: used for AI profile context
-  weight: number; // Weight in kg - required for base calculation
+  weight: number; // Weight in kg - required for base calculation (stored in kg internally)
+  weightUnit?: WeightUnit; // Preferred unit system for display (kg or lbs)
   activity: ActivityLevel; // Activity level affects hydration needs
   wakeTime: string; // Format: "HH:MM" - start of hydration window
   sleepTime: string; // Format: "HH:MM" - end of hydration window
   reminderFrequency: ReminderFrequency; // How often to remind (60 or 90 minutes)
   climate: ClimateType; // Climate affects hydration needs
-  dailyGoalML: number; // Calculated daily hydration goal in milliliters
+  dailyGoalML: number; // Calculated daily hydration goal in milliliters (stored in ml internally)
   aiProfileSummary: string; // AI-generated profile description
   locationName?: string; // Optional: user's location name (e.g., "Bucharest, RO")
   onboardingComplete: boolean; // Whether user has completed initial setup

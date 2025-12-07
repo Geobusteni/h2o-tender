@@ -1,0 +1,12 @@
+# Environment variables (never commit these)
+.env
+.env.local
+.env.*.local
+
+# Node modules (if not already in root .gitignore)
+node_modules/
+
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
