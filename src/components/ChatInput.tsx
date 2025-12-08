@@ -238,6 +238,15 @@ export function ChatInput({
   if (variant === 'location') {
     return (
       <View style={styles.locationContainer}>
+        {onLocationRequest && (
+          <TouchableOpacity
+            style={styles.locationButton}
+            onPress={onLocationRequest}
+          >
+            <Text style={styles.locationButtonText}>Use My Location</Text>
+          </TouchableOpacity>
+        )}
+        {onLocationRequest && <Text style={styles.orText}>or</Text>}
         <View style={styles.container}>
           <TextInput
             style={styles.textInput}
@@ -257,17 +266,6 @@ export function ChatInput({
             <Text style={styles.sendButtonText}>Send</Text>
           </TouchableOpacity>
         </View>
-        {onLocationRequest && (
-          <>
-            <Text style={styles.orText}>or</Text>
-            <TouchableOpacity
-              style={styles.locationButton}
-              onPress={onLocationRequest}
-            >
-              <Text style={styles.locationButtonText}>Use My Location</Text>
-            </TouchableOpacity>
-          </>
-        )}
       </View>
     );
   }
@@ -383,6 +381,7 @@ const styles = StyleSheet.create({
     color: '#757575',
     fontSize: 14,
     marginVertical: 8,
+    paddingHorizontal: 12,
   },
   locationButton: {
     backgroundColor: '#4CAF50',
@@ -390,7 +389,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     marginHorizontal: 12,
-    marginBottom: 12,
+    marginTop: 12,
     alignItems: 'center',
   },
   locationButtonText: {
