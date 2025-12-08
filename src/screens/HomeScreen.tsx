@@ -107,7 +107,7 @@ export function HomeScreen({ navigation }: HomeScreenProps): React.ReactElement 
     } else {
       setNextReminder(null);
     }
-  }, [settings, dailyState]);
+  }, [settings, dailyState, dailyState?.remindersSkipped, dailyState?.remindersCompleted]);
 
   /**
    * Check if user is adding water too rapidly
