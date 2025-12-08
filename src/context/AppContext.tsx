@@ -9,7 +9,7 @@ import type {
   DailyState,
   AppContextType,
 } from '../models/types';
-import { DEFAULT_DAILY_STATE } from '../models/types';
+import { DEFAULT_DAILY_STATE, DEFAULT_SETTINGS } from '../models/types';
 import {
   loadSettings,
   saveSettings,
@@ -111,14 +111,13 @@ export function AppProvider({ children }: AppProviderProps): React.ReactElement 
 
   /**
    * Update user settings
+   * If settings is null (e.g., after reset), create new settings from defaults
    */
   const updateSettings = useCallback(async (updates: Partial<UserSettings>): Promise<void> => {
     try {
-      if (!settings) {
-        throw new Error('Settings not loaded');
-      }
-
-      const newSettings = { ...settings, ...updates };
+      // If settings is null (after reset or initial onboarding), create from defaults
+      const baseSettings = settings || { ...DEFAULT_SETTINGS };
+      const newSettings = { ...baseSettings, ...updates };
 
       // Recalculate daily goal if relevant fields changed
       if (
@@ -136,8 +135,18 @@ export function AppProvider({ children }: AppProviderProps): React.ReactElement 
       await saveSettings(newSettings);
       setSettings(newSettings);
 
-      // Update daily state remaining if goal changed
-      if (dailyState && updates.dailyGoalML) {
+      // Initialize daily state if it doesn't exist (first time onboarding)
+      if (!dailyState) {
+        const today = getTodayDate();
+        const newDailyState: DailyState = {
+          ...DEFAULT_DAILY_STATE,
+          date: today,
+          remainingML: newSettings.dailyGoalML,
+        };
+        await saveDailyState(newDailyState);
+        setDailyState(newDailyState);
+      } else if (updates.dailyGoalML) {
+        // Update daily state remaining if goal changed and daily state exists
         const updatedDailyState = {
           ...dailyState,
           remainingML: updates.dailyGoalML - dailyState.consumedML,
