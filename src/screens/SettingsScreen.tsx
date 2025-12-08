@@ -256,6 +256,19 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.React
     setShowDonationModal(true);
   };
 
+  // Test notification (dev mode only)
+  const handleTestNotification = async () => {
+    try {
+      await NotificationService.scheduleTestNotification(1);
+      Alert.alert(
+        'Test Scheduled',
+        'A test notification will appear in 1 minute. You can test "Drink Now" and "Skip" actions.'
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to schedule test notification');
+    }
+  };
+
   // Activity level labels
   const activityLabels: Record<ActivityLevel, string> = {
     none: 'None',
@@ -396,6 +409,20 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): React.React
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Developer Tools Section - DEV MODE ONLY */}
+        {__DEV__ && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Developer Tools</Text>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.devButton]}
+              onPress={handleTestNotification}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.actionButtonText}>Test Notification (1 min)</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Support Section */}
         <View style={styles.section}>
@@ -630,6 +657,10 @@ const styles = StyleSheet.create({
   },
   dangerButtonText: {
     color: '#E74C3C',
+  },
+  devButton: {
+    backgroundColor: '#F5F5F5',
+    borderBottomWidth: 0,
   },
   supportButton: {
     backgroundColor: '#4A90E2',
