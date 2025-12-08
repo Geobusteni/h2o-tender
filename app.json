@@ -21,8 +21,7 @@
         "UIBackgroundModes": [
           "location",
           "fetch",
-          "location",
-          "fetch"
+          "remote-notification"
         ],
         "NSLocationWhenInUseUsageDescription": "We use your location to determine your local climate and provide accurate hydration recommendations.",
         "NSLocationAlwaysUsageDescription": "We use your location to determine your local climate and provide accurate hydration recommendations.",
