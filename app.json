@@ -58,7 +58,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "We use your location to determine your local climate and provide accurate hydration recommendations."
         }
-      ]
+      ],
+      "expo-iap"
     ],
     "notification": {
       "color": "#2196F3",

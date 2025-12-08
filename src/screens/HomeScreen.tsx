@@ -11,11 +11,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  Linking,
 } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { ProgressRing } from '../components/ProgressRing';
 import { QuickAddModal } from '../components/QuickAddModal';
+import { DonationModal } from '../components/DonationModal';
 import { NextReminderCard } from '../components/NextReminderCard';
 import {
   computeReminderSchedule,
@@ -43,6 +43,7 @@ export function HomeScreen({ navigation }: HomeScreenProps): React.ReactElement 
   } = useApp();
 
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const [showDonationModal, setShowDonationModal] = useState(false);
   const [nextReminder, setNextReminder] = useState<ScheduledReminder | null>(null);
 
   /**
@@ -316,23 +317,10 @@ export function HomeScreen({ navigation }: HomeScreenProps): React.ReactElement 
   };
 
   /**
-   * Open donation link
+   * Open donation modal
    */
   const handleDonation = () => {
-    Alert.alert(
-      'Support Development',
-      'Thank you for considering supporting H2O Tender! This feature will open a donation page.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Open Link',
-          onPress: () => {
-            // Replace with actual donation URL
-            Linking.openURL('https://example.com/donate');
-          },
-        },
-      ]
-    );
+    setShowDonationModal(true);
   };
 
   /**
@@ -489,6 +477,12 @@ export function HomeScreen({ navigation }: HomeScreenProps): React.ReactElement 
         visible={showCustomModal}
         onClose={() => setShowCustomModal(false)}
         onAdd={handleCustomAdd}
+      />
+
+      {/* Donation Modal */}
+      <DonationModal
+        visible={showDonationModal}
+        onClose={() => setShowDonationModal(false)}
       />
     </ScrollView>
   );
