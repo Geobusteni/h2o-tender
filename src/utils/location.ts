@@ -51,16 +51,32 @@ export async function requestLocationPermission(): Promise<boolean> {
  * Returns latitude and longitude coordinates
  */
 export async function getCurrentLocation(): Promise<Coordinates> {
+  const LOCATION_TIMEOUT_MS = 15000;
+
   try {
     const hasPermission = await requestLocationPermission();
-
     if (!hasPermission) {
       throw new Error('Location permission not granted');
     }
 
-    const location = await Location.getCurrentPositionAsync({
+    // Check if location services are enabled
+    const locationEnabled = await isLocationEnabled();
+    if (!locationEnabled) {
+      throw new Error('Location services are disabled. Please enable them in your device settings.');
+    }
+
+    // Add timeout to prevent hanging
+    const locationPromise = Location.getCurrentPositionAsync({
       accuracy: Location.Accuracy.Balanced,
     });
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Location request timed out. Please try again or enter your city manually.'));
+      }, LOCATION_TIMEOUT_MS);
+    });
+
+    const location = await Promise.race([locationPromise, timeoutPromise]);
 
     return {
       latitude: location.coords.latitude,
@@ -68,6 +84,9 @@ export async function getCurrentLocation(): Promise<Coordinates> {
     };
   } catch (error) {
     console.error('Error getting current location:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
     throw new Error('Failed to get current location. Please check your location settings.');
   }
 }

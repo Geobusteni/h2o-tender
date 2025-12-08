@@ -205,7 +205,7 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): Rea
         }));
 
         addAIMessage(
-          `Great! I've set your location to ${locationText}. I'll use a moderate climate setting for your hydration calculations.`
+          `I've set your location to ${locationText}. I couldn't determine your exact climate, so I'm using a moderate (mild) setting. You can adjust this later in Settings if needed.`
         );
 
         setTimeout(() => {
