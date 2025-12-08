@@ -38,7 +38,6 @@ export class NotificationService {
       // Configure notification handler
       Notifications.setNotificationHandler({
         handleNotification: async () => ({
-          shouldShowAlert: true,
           shouldPlaySound: true,
           shouldSetBadge: false,
           shouldShowBanner: true,
@@ -114,6 +113,8 @@ export class NotificationService {
             title: 'Hydration Reminder',
             body: `Drink ~${reminder.mlAmount} ml now.`,
             categoryIdentifier: this.CATEGORY_ID,
+            sticky: true, // Persistent on Android - won't auto-dismiss
+            autoDismiss: false, // Persistent on iOS - won't auto-dismiss
             data: {
               mlAmount: reminder.mlAmount,
               hour: reminder.hour,
@@ -296,6 +297,8 @@ export class NotificationService {
           title: 'Hydration Reminder (Test)',
           body: 'Drink ~250 ml now. This is a test notification.',
           categoryIdentifier: this.CATEGORY_ID,
+          sticky: true,
+          autoDismiss: false,
           data: {
             mlAmount: 250,
             isTest: true,
