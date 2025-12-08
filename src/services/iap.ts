@@ -7,7 +7,7 @@ import { DONATION_PRODUCT_IDS, DonationTier } from '../models/iap';
  */
 export async function initializeIAP(): Promise<void> {
   try {
-    await IAP.connectAsync();
+    await IAP.initConnection();
   } catch (error) {
     console.error('Failed to initialize IAP:', error);
     throw new Error('Could not connect to the app store');
@@ -24,18 +24,21 @@ export async function getProducts(): Promise<DonationTier[]> {
         ? DONATION_PRODUCT_IDS.ios
         : DONATION_PRODUCT_IDS.android;
 
-    const { results } = await IAP.getProductsAsync(productIds);
+    const products = await IAP.fetchProducts({
+      skus: productIds,
+      type: 'in-app',
+    });
 
-    if (!results || results.length === 0) {
+    if (!products || products.length === 0) {
       throw new Error('No products available');
     }
 
     // Map store products to our DonationTier format
-    const tiers: DonationTier[] = results.map((product) => ({
-      productId: product.productId,
+    const tiers: DonationTier[] = products.map((product) => ({
+      productId: product.id,
       title: product.title,
       description: product.description || '',
-      price: product.priceString,
+      price: product.displayPrice,
     }));
 
     return tiers;
@@ -50,7 +53,13 @@ export async function getProducts(): Promise<DonationTier[]> {
  */
 export async function purchaseDonation(productId: string): Promise<void> {
   try {
-    await IAP.purchaseItemAsync(productId);
+    await IAP.requestPurchase({
+      request: {
+        ios: { sku: productId },
+        android: { skus: [productId] },
+      },
+      type: 'in-app',
+    });
     // Purchase successful - the transaction will be handled by listeners
   } catch (error: unknown) {
     console.error('Purchase failed:', error);
@@ -58,7 +67,7 @@ export async function purchaseDonation(productId: string): Promise<void> {
     // Handle user cancellation gracefully
     if (error && typeof error === 'object' && 'code' in error) {
       const errorCode = (error as { code?: string }).code;
-      if (errorCode === 'E_USER_CANCELLED') {
+      if (errorCode === IAP.ErrorCode.UserCancelled || errorCode === 'user-cancelled') {
         throw new Error('Purchase cancelled');
       }
     }
@@ -71,11 +80,14 @@ export async function purchaseDonation(productId: string): Promise<void> {
  * Finish a transaction (acknowledge purchase)
  */
 export async function finishTransaction(
-  purchase: IAP.IAPItemDetails,
+  purchase: IAP.Purchase,
   isConsumable: boolean = true
 ): Promise<void> {
   try {
-    await IAP.finishTransactionAsync(purchase, isConsumable);
+    await IAP.finishTransaction({
+      purchase,
+      isConsumable,
+    });
   } catch (error) {
     console.error('Failed to finish transaction:', error);
   }
@@ -86,7 +98,7 @@ export async function finishTransaction(
  */
 export async function cleanup(): Promise<void> {
   try {
-    await IAP.disconnectAsync();
+    await IAP.endConnection();
   } catch (error) {
     console.error('Failed to cleanup IAP:', error);
   }
@@ -95,10 +107,10 @@ export async function cleanup(): Promise<void> {
 /**
  * Get purchase history (for restoring purchases if needed)
  */
-export async function getPurchaseHistory(): Promise<IAP.IAPItemDetails[]> {
+export async function getPurchaseHistory(): Promise<IAP.Purchase[]> {
   try {
-    const { results } = await IAP.getPurchaseHistoryAsync();
-    return results || [];
+    const purchases = await IAP.getAvailablePurchases();
+    return purchases || [];
   } catch (error) {
     console.error('Failed to get purchase history:', error);
     return [];
