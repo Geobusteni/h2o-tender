@@ -59,21 +59,27 @@ export function AppProvider({ children }: AppProviderProps): React.ReactElement 
         const loadedSettings = await loadSettings();
         setSettings(loadedSettings);
 
-        // Load today's state
-        const today = getTodayDate();
-        const loadedState = await loadDailyState(today);
+        // Only load daily state if settings exist (user has completed onboarding)
+        if (loadedSettings !== null) {
+          // Load today's state
+          const today = getTodayDate();
+          const loadedState = await loadDailyState(today);
 
-        // If loaded state is from a previous day, reset it
-        if (loadedState.date !== today) {
-          const newState: DailyState = {
-            ...DEFAULT_DAILY_STATE,
-            date: today,
-            remainingML: loadedSettings.dailyGoalML,
-          };
-          await saveDailyState(newState);
-          setDailyState(newState);
+          // If loaded state is from a previous day, reset it
+          if (loadedState.date !== today) {
+            const newState: DailyState = {
+              ...DEFAULT_DAILY_STATE,
+              date: today,
+              remainingML: loadedSettings.dailyGoalML,
+            };
+            await saveDailyState(newState);
+            setDailyState(newState);
+          } else {
+            setDailyState(loadedState);
+          }
         } else {
-          setDailyState(loadedState);
+          // No settings exist, user needs to complete onboarding
+          setDailyState(null);
         }
       } catch (err) {
         console.error('Error loading initial data:', err);
@@ -380,9 +386,14 @@ export function AppProvider({ children }: AppProviderProps): React.ReactElement 
       const loadedSettings = await loadSettings();
       setSettings(loadedSettings);
 
-      const today = getTodayDate();
-      const loadedState = await loadDailyState(today);
-      setDailyState(loadedState);
+      // Only load daily state if settings exist
+      if (loadedSettings !== null) {
+        const today = getTodayDate();
+        const loadedState = await loadDailyState(today);
+        setDailyState(loadedState);
+      } else {
+        setDailyState(null);
+      }
     } catch (err) {
       console.error('Error refreshing data:', err);
       setError('Failed to refresh data');

@@ -5,7 +5,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { UserSettings, DailyState } from '../models/types';
-import { DEFAULT_SETTINGS, DEFAULT_DAILY_STATE } from '../models/types';
+import { DEFAULT_DAILY_STATE } from '../models/types';
 import { getTodayDate } from '../utils/hydration';
 
 // Storage keys
@@ -18,23 +18,23 @@ const STORAGE_KEYS = {
 /**
  * Load user settings from storage
  *
- * @returns User settings or default settings if none exist
+ * @returns User settings or null if none exist (user needs to complete onboarding)
  */
-export async function loadSettings(): Promise<UserSettings> {
+export async function loadSettings(): Promise<UserSettings | null> {
   try {
     const json = await AsyncStorage.getItem(STORAGE_KEYS.SETTINGS);
 
     if (json === null) {
-      // No settings saved yet, return defaults
-      return { ...DEFAULT_SETTINGS };
+      // No settings saved yet, return null to trigger onboarding
+      return null;
     }
 
     const settings = JSON.parse(json) as UserSettings;
     return settings;
   } catch (error) {
     console.error('Error loading settings:', error);
-    // Return defaults on error
-    return { ...DEFAULT_SETTINGS };
+    // Return null on error to be safe (user will need to go through onboarding)
+    return null;
   }
 }
 
