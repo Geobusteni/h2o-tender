@@ -281,4 +281,34 @@ export class NotificationService {
       throw error;
     }
   }
+
+  /**
+   * Schedule a test notification 1-2 minutes in the future
+   * Useful for testing the full notification flow including actions
+   * DEV MODE ONLY
+   */
+  static async scheduleTestNotification(minutesFromNow: number = 1): Promise<string> {
+    try {
+      const seconds = minutesFromNow * 60;
+
+      return await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Hydration Reminder (Test)',
+          body: 'Drink ~250 ml now. This is a test notification.',
+          categoryIdentifier: this.CATEGORY_ID,
+          data: {
+            mlAmount: 250,
+            isTest: true,
+          },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: seconds,
+        },
+      });
+    } catch (error) {
+      console.error('Error scheduling test notification:', error);
+      throw error;
+    }
+  }
 }
