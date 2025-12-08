@@ -59,13 +59,24 @@ export function HomeScreen({ navigation }: HomeScreenProps): React.ReactElement 
       settings.dailyGoalML
     );
 
-    // Find next reminder based on current time
+    // Calculate which reminder index we're currently on (completed + skipped)
+    const currentReminderIndex = dailyState.remindersCompleted + dailyState.remindersSkipped;
+
+    // Find next reminder based on:
+    // 1. Must be after the current reminder index (accounting for completed/skipped)
+    // 2. Must be in the future time-wise
     const currentTime = getCurrentTime();
     const [currentHour, currentMinute] = currentTime.split(':').map(Number);
     const currentMinutes = currentHour * 60 + currentMinute;
 
-    // Find first reminder that hasn't passed yet
-    const upcoming = schedule.find((reminder) => {
+    // Filter schedule to only include reminders after current index and in the future
+    const upcoming = schedule.find((reminder, index) => {
+      // Must be after the current reminder index
+      if (index < currentReminderIndex) {
+        return false;
+      }
+
+      // Must be in the future
       const [reminderHour, reminderMinute] = reminder.time.split(':').map(Number);
       const reminderMinutes = reminderHour * 60 + reminderMinute;
       return reminderMinutes > currentMinutes;
