@@ -36,7 +36,7 @@ export function SettingsRow({
   customRightComponent,
   style,
   showChevron = false,
-}: SettingsRowProps): JSX.Element {
+}: SettingsRowProps): React.ReactElement {
   const renderRightComponent = () => {
     if (customRightComponent) {
       return customRightComponent;

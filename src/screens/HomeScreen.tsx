@@ -11,11 +11,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  Linking,
 } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { ProgressRing } from '../components/ProgressRing';
 import { QuickAddModal } from '../components/QuickAddModal';
+import { DonationModal } from '../components/DonationModal';
 import { NextReminderCard } from '../components/NextReminderCard';
 import {
   computeReminderSchedule,
@@ -33,7 +33,7 @@ interface HomeScreenProps {
  * HomeScreen Component
  * Main dashboard showing hydration progress and controls
  */
-export function HomeScreen({ navigation }: HomeScreenProps): JSX.Element {
+export function HomeScreen({ navigation }: HomeScreenProps): React.ReactElement {
   const {
     settings,
     dailyState,
@@ -43,6 +43,7 @@ export function HomeScreen({ navigation }: HomeScreenProps): JSX.Element {
   } = useApp();
 
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const [showDonationModal, setShowDonationModal] = useState(false);
   const [nextReminder, setNextReminder] = useState<ScheduledReminder | null>(null);
 
   /**
@@ -59,27 +60,103 @@ export function HomeScreen({ navigation }: HomeScreenProps): JSX.Element {
       settings.dailyGoalML
     );
 
-    // Find next reminder based on current time
+    // Calculate which reminder index we're currently on (completed + skipped)
+    const currentReminderIndex = dailyState.remindersCompleted + dailyState.remindersSkipped;
+
+    // Find next reminder based on:
+    // 1. Must be after the current reminder index (accounting for completed/skipped)
+    // 2. Must be in the future time-wise
     const currentTime = getCurrentTime();
     const [currentHour, currentMinute] = currentTime.split(':').map(Number);
     const currentMinutes = currentHour * 60 + currentMinute;
 
-    // Find first reminder that hasn't passed yet
-    const upcoming = schedule.find((reminder) => {
+    // Filter schedule to only include reminders after current index and in the future
+    const upcoming = schedule.find((reminder, index) => {
+      // Must be after the current reminder index
+      if (index < currentReminderIndex) {
+        return false;
+      }
+
+      // Must be in the future
       const [reminderHour, reminderMinute] = reminder.time.split(':').map(Number);
       const reminderMinutes = reminderHour * 60 + reminderMinute;
       return reminderMinutes > currentMinutes;
     });
 
-    setNextReminder(upcoming || null);
-  }, [settings, dailyState]);
+    // Apply redistribution to calculate updated amount if reminders were skipped
+    if (upcoming) {
+      const totalReminders = schedule.length;
+      const remindersCompleted = dailyState.remindersCompleted;
+      const remindersSkipped = dailyState.remindersSkipped;
+      const remindersLeft = totalReminders - remindersCompleted - remindersSkipped;
+
+      if (remindersLeft > 0 && (remindersSkipped > 0 || remindersCompleted > 0)) {
+        // Recalculate amount based on redistribution
+        const updatedAmount = redistributeOnSkip(
+          settings.dailyGoalML,
+          dailyState.consumedML,
+          remindersLeft
+        );
+
+        setNextReminder({
+          ...upcoming,
+          amountML: updatedAmount,
+        });
+      } else {
+        setNextReminder(upcoming);
+      }
+    } else {
+      setNextReminder(null);
+    }
+  }, [settings, dailyState, dailyState?.remindersSkipped, dailyState?.remindersCompleted]);
+
+  /**
+   * Check if user is adding water too rapidly
+   * Returns true if 3+ additions within last 10 minutes
+   */
+  const checkRapidIntake = (): boolean => {
+    if (!dailyState) return false;
+
+    const now = Date.now();
+    const tenMinutesAgo = now - 10 * 60 * 1000; // 10 minutes in milliseconds
+
+    // Count additions within last 10 minutes (including current one)
+    const recentAdditions = dailyState.waterAdditionTimestamps.filter(
+      (timestamp) => timestamp >= tenMinutesAgo
+    );
+
+    // Return true if this will be the 3rd addition in 10 minutes
+    return recentAdditions.length >= 2;
+  };
+
+  /**
+   * Show overhydration warning
+   */
+  const showOverhydrationWarning = () => {
+    Alert.alert(
+      'Drinking Too Fast?',
+      'You\'ve added water 3 times in the last 10 minutes. While staying hydrated is important, drinking too much water too quickly can dilute sodium levels in your blood (hyponatremia), which can be harmful.\n\n' +
+      'For best results, pace your water intake throughout the day. Consider waiting a few minutes before adding more water.',
+      [
+        { text: 'Got It', style: 'default' }
+      ]
+    );
+  };
 
   /**
    * Handle quick-add button press
    */
   const handleQuickAdd = async (amountML: number) => {
     try {
+      // Check for rapid intake before recording
+      const isRapidIntake = checkRapidIntake();
+
       await recordConsumption(amountML);
+
+      // Show warning after successful recording if needed
+      if (isRapidIntake) {
+        showOverhydrationWarning();
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to record water consumption');
     }
@@ -90,7 +167,15 @@ export function HomeScreen({ navigation }: HomeScreenProps): JSX.Element {
    */
   const handleCustomAdd = async (amountML: number) => {
     try {
+      // Check for rapid intake before recording
+      const isRapidIntake = checkRapidIntake();
+
       await recordConsumption(amountML);
+
+      // Show warning after successful recording if needed
+      if (isRapidIntake) {
+        showOverhydrationWarning();
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to record water consumption');
     }
@@ -149,31 +234,93 @@ export function HomeScreen({ navigation }: HomeScreenProps): JSX.Element {
   const handleShowExplanation = () => {
     if (!settings) return;
 
+    // Generate detailed summary similar to onboarding
+    const isImperial = settings.weightUnit === 'lbs';
+
+    // Calculate components
+    const baseCalc = settings.weight * 32;
+
+    const activityBonus = {
+      none: 0,
+      light: 200,
+      moderate: 500,
+      heavy: 800,
+    }[settings.activity];
+
+    const climateBonus = {
+      cold: -200,
+      mild: 0,
+      hot: 300,
+      veryHot: 500,
+    }[settings.climate];
+
+    // Helper formatting functions
+    const formatAmount = (ml: number): string => {
+      if (isImperial) {
+        const flOz = ml * 0.033814;
+        if (flOz >= 1) {
+          return `${flOz.toFixed(1)} fl oz`;
+        }
+        return `${flOz.toFixed(2)} fl oz`;
+      }
+      return formatMilliliters(ml);
+    };
+
+    const formatDailyGoal = (ml: number): string => {
+      if (isImperial) {
+        const flOz = ml * 0.033814;
+        if (flOz >= 128) {
+          const gallons = flOz / 128;
+          return `${gallons.toFixed(2)} gallons (${Math.round(flOz)} fl oz)`;
+        }
+        return `${Math.round(flOz)} fl oz`;
+      }
+      return formatMilliliters(ml);
+    };
+
+    const formatBaseCalc = (ml: number, weightKg: number): string => {
+      if (isImperial) {
+        const weightLbs = weightKg / 0.453592;
+        return `${formatAmount(ml)} (${weightLbs.toFixed(1)} lbs × 32 ml/kg)`;
+      }
+      return `${ml} ml (${weightKg.toFixed(1)} kg × 32 ml/kg)`;
+    };
+
+    // Calculate reminder schedule
+    const reminderSchedule = computeReminderSchedule(
+      settings.wakeTime,
+      settings.sleepTime,
+      settings.reminderFrequency,
+      settings.dailyGoalML
+    );
+
+    // Build detailed summary
+    let summary = `Based on your profile, here's your personalized hydration plan:\n\n`;
+    summary += `Base: ${formatBaseCalc(baseCalc, settings.weight)}\n`;
+    summary += `Activity bonus: ${activityBonus >= 0 ? '+' : ''}${formatAmount(activityBonus)} (${settings.activity} activity)\n`;
+    summary += `Climate adjustment: ${climateBonus >= 0 ? '+' : ''}${formatAmount(climateBonus)} (${settings.climate} climate)\n\n`;
+    summary += `Daily Goal: ${formatDailyGoal(settings.dailyGoalML)}\n\n`;
+    summary += `Reminders: Every ${settings.reminderFrequency} minutes between ${settings.wakeTime} and ${settings.sleepTime}\n\n`;
+
+    if (reminderSchedule.length > 0) {
+      summary += `Schedule (${reminderSchedule.length} reminders):\n`;
+      reminderSchedule.forEach((reminder) => {
+        summary += `• ${reminder.time}: ${formatAmount(reminder.amountML)}\n`;
+      });
+    }
+
     Alert.alert(
       'Your Hydration Plan',
-      settings.aiProfileSummary || 'No profile summary available.',
+      summary,
       [{ text: 'OK' }]
     );
   };
 
   /**
-   * Open donation link
+   * Open donation modal
    */
   const handleDonation = () => {
-    Alert.alert(
-      'Support Development',
-      'Thank you for considering supporting H2O Tender! This feature will open a donation page.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Open Link',
-          onPress: () => {
-            // Replace with actual donation URL
-            Linking.openURL('https://example.com/donate');
-          },
-        },
-      ]
-    );
+    setShowDonationModal(true);
   };
 
   /**
@@ -196,9 +343,17 @@ export function HomeScreen({ navigation }: HomeScreenProps): JSX.Element {
 
   // Calculate progress
   const progress = dailyState.consumedML / settings.dailyGoalML;
+  const isGoalReached = dailyState.consumedML >= settings.dailyGoalML;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      {/* Congratulations Banner - Show when goal is reached */}
+      {isGoalReached && (
+        <View style={styles.congratsBanner}>
+          <Text style={styles.congratsText}>Hooray! You're the best H2O drinker of the day!</Text>
+        </View>
+      )}
+
       {/* Header Section */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
@@ -247,40 +402,42 @@ export function HomeScreen({ navigation }: HomeScreenProps): JSX.Element {
         />
       </View>
 
-      {/* Quick Add Buttons */}
-      <View style={styles.quickAddSection}>
-        <Text style={styles.sectionTitle}>Quick Add</Text>
-        <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={styles.quickAddButton}
-            onPress={() => handleQuickAdd(100)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.quickAddButtonText}>+100 ml</Text>
-          </TouchableOpacity>
+      {/* Quick Add Buttons - Only show if goal not reached */}
+      {!isGoalReached && (
+        <View style={styles.quickAddSection}>
+          <Text style={styles.sectionTitle}>Quick Add</Text>
+          <View style={styles.buttonRow}>
+            <TouchableOpacity
+              style={styles.quickAddButton}
+              onPress={() => handleQuickAdd(100)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.quickAddButtonText}>+100 ml</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.quickAddButton}
-            onPress={() => handleQuickAdd(200)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.quickAddButtonText}>+200 ml</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickAddButton}
+              onPress={() => handleQuickAdd(200)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.quickAddButtonText}>+200 ml</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.quickAddButton, styles.customButton]}
-            onPress={() => setShowCustomModal(true)}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.quickAddButtonText, styles.customButtonText]}>
-              +Custom
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.quickAddButton, styles.customButton]}
+              onPress={() => setShowCustomModal(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.quickAddButtonText, styles.customButtonText]}>
+                +Custom
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
 
-      {/* Next Reminder */}
-      {nextReminder && (
+      {/* Next Reminder - Only show if goal not reached */}
+      {nextReminder && !isGoalReached && (
         <View style={styles.reminderSection}>
           <NextReminderCard
             time={nextReminder.time}
@@ -320,6 +477,12 @@ export function HomeScreen({ navigation }: HomeScreenProps): JSX.Element {
         visible={showCustomModal}
         onClose={() => setShowCustomModal(false)}
         onAdd={handleCustomAdd}
+      />
+
+      {/* Donation Modal */}
+      <DonationModal
+        visible={showDonationModal}
+        onClose={() => setShowDonationModal(false)}
       />
     </ScrollView>
   );
@@ -497,5 +660,22 @@ const styles = StyleSheet.create({
     color: '#333',
     fontSize: 16,
     fontWeight: '600',
+  },
+  congratsBanner: {
+    backgroundColor: '#4CAF50',
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  congratsText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });

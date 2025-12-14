@@ -25,7 +25,7 @@ export function ProgressRing({
   strokeWidth = 16,
   color = '#4A90E2',
   backgroundColor = '#E0E0E0',
-}: ProgressRingProps): JSX.Element {
+}: ProgressRingProps): React.ReactElement {
   // Calculate circle properties
   const center = size / 2;
   const radius = (size - strokeWidth) / 2;

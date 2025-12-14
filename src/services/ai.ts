@@ -28,9 +28,9 @@ export class AIService {
     try {
       // Quick connectivity check - try to reach the Firebase function with a timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-      const response = await fetch(this.CLOUD_FUNCTION_URL, {
+      await fetch(this.CLOUD_FUNCTION_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,7 +40,7 @@ export class AIService {
       });
 
       clearTimeout(timeoutId);
-      
+
       // Even if we get an error response, network is available
       return true;
     } catch (error) {
@@ -231,7 +231,7 @@ Include: base calculation (weight * 35ml), activity level bonus, and climate adj
    */
   static async getClimateForLocation(latitude: number, longitude: number): Promise<ClimateResponse | null> {
     // Maximum distance (km) to use local fallback - beyond this, ask for manual entry
-    const MAX_FALLBACK_DISTANCE_KM = 500;
+    const MAX_FALLBACK_DISTANCE_KM = 200;
 
     // Try AI service first (always attempt, no network check)
     try {

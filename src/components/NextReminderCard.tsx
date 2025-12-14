@@ -20,7 +20,7 @@ export function NextReminderCard({
   time,
   amountML,
   onSkip,
-}: NextReminderCardProps): JSX.Element {
+}: NextReminderCardProps): React.ReactElement {
   /**
    * Handle skip button press with confirmation
    */

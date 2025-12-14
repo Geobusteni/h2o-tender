@@ -50,6 +50,7 @@ export interface DailyState {
   remindersCompleted: number; // Count of reminders user marked as completed
   remindersSkipped: number; // Count of reminders user skipped
   scheduledReminderIds: string[]; // Array of notification IDs for cleanup
+  waterAdditionTimestamps: number[]; // Unix timestamps of manual water additions for rapid intake detection
 }
 
 /**
@@ -115,6 +116,7 @@ export interface AppContextActions {
   completeReminder: () => Promise<void>;
   resetDay: () => Promise<void>;
   refreshData: () => Promise<void>;
+  resetAllData: () => Promise<void>;
 }
 
 /**
@@ -148,4 +150,5 @@ export const DEFAULT_DAILY_STATE: Omit<DailyState, 'date'> = {
   remindersCompleted: 0,
   remindersSkipped: 0,
   scheduledReminderIds: [],
+  waterAdditionTimestamps: [],
 };

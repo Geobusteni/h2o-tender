@@ -14,23 +14,22 @@ import {
   TouchableOpacity,
   TextInput,
   Modal,
-  Linking,
 } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { SettingsRow } from '../components/SettingsRow';
 import { TimePicker } from '../components/TimePicker';
 import { SegmentedControl } from '../components/SegmentedControl';
+import { DonationModal } from '../components/DonationModal';
 import { calculateDailyGoal, computeReminderSchedule } from '../utils/hydration';
 import { NotificationService } from '../services/notifications';
-import { resetAll } from '../services/persistence';
 import type { ActivityLevel, ClimateType, ReminderFrequency } from '../models/types';
 
 interface SettingsScreenProps {
   navigation?: any;
 }
 
-export function SettingsScreen({ navigation }: SettingsScreenProps): JSX.Element {
-  const { settings, updateSettings } = useApp();
+export function SettingsScreen({ navigation }: SettingsScreenProps): React.ReactElement {
+  const { settings, updateSettings, resetAllData } = useApp();
 
   // Local state for immediate UI updates
   const [weight, setWeight] = useState(settings?.weight || 70);
@@ -49,6 +48,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): JSX.Element
   const [showAgeModal, setShowAgeModal] = useState(false);
   const [showActivityModal, setShowActivityModal] = useState(false);
   const [showClimateModal, setShowClimateModal] = useState(false);
+  const [showDonationModal, setShowDonationModal] = useState(false);
 
   // Temp input values for modals
   const [tempWeight, setTempWeight] = useState('');
@@ -226,8 +226,8 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): JSX.Element
           style: 'destructive',
           onPress: async () => {
             try {
-              await NotificationService.cancelAllReminders();
-              await resetAll();
+              // Use context method to reset both storage AND in-memory state
+              await resetAllData();
               Alert.alert(
                 'Data Reset',
                 'All data has been cleared. The app will now restart.',
@@ -235,7 +235,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): JSX.Element
                   {
                     text: 'OK',
                     onPress: () => {
-                      // Navigate to onboarding or restart app
+                      // Navigate to onboarding - state is already cleared
                       navigation?.navigate('Onboarding');
                     },
                   },
@@ -253,10 +253,20 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): JSX.Element
 
   // Support development
   const handleSupportDevelopment = () => {
-    const donationUrl = 'https://buymeacoffee.com/h2otender'; // Example URL
-    Linking.openURL(donationUrl).catch(err =>
-      console.error('Error opening donation link:', err)
-    );
+    setShowDonationModal(true);
+  };
+
+  // Test notification (dev mode only)
+  const handleTestNotification = async () => {
+    try {
+      await NotificationService.scheduleTestNotification(1);
+      Alert.alert(
+        'Test Scheduled',
+        'A test notification will appear in 1 minute. You can test "Drink Now" and "Skip" actions.'
+      );
+    } catch (error) {
+      Alert.alert('Error', 'Failed to schedule test notification');
+    }
   };
 
   // Activity level labels
@@ -399,6 +409,20 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): JSX.Element
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Developer Tools Section - DEV MODE ONLY */}
+        {__DEV__ && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Developer Tools</Text>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.devButton]}
+              onPress={handleTestNotification}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.actionButtonText}>Test Notification (1 min)</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Support Section */}
         <View style={styles.section}>
@@ -555,6 +579,12 @@ export function SettingsScreen({ navigation }: SettingsScreenProps): JSX.Element
           </View>
         </View>
       </Modal>
+
+      {/* Donation Modal */}
+      <DonationModal
+        visible={showDonationModal}
+        onClose={() => setShowDonationModal(false)}
+      />
     </View>
   );
 }
@@ -627,6 +657,10 @@ const styles = StyleSheet.create({
   },
   dangerButtonText: {
     color: '#E74C3C',
+  },
+  devButton: {
+    backgroundColor: '#F5F5F5',
+    borderBottomWidth: 0,
   },
   supportButton: {
     backgroundColor: '#4A90E2',

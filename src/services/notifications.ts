@@ -38,7 +38,6 @@ export class NotificationService {
       // Configure notification handler
       Notifications.setNotificationHandler({
         handleNotification: async () => ({
-          shouldShowAlert: true,
           shouldPlaySound: true,
           shouldSetBadge: false,
           shouldShowBanner: true,
@@ -114,6 +113,8 @@ export class NotificationService {
             title: 'Hydration Reminder',
             body: `Drink ~${reminder.mlAmount} ml now.`,
             categoryIdentifier: this.CATEGORY_ID,
+            sticky: true, // Persistent on Android - won't auto-dismiss
+            autoDismiss: false, // Persistent on iOS - won't auto-dismiss
             data: {
               mlAmount: reminder.mlAmount,
               hour: reminder.hour,
@@ -278,6 +279,38 @@ export class NotificationService {
       });
     } catch (error) {
       console.error('Error sending test notification:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Schedule a test notification 1-2 minutes in the future
+   * Useful for testing the full notification flow including actions
+   * DEV MODE ONLY
+   */
+  static async scheduleTestNotification(minutesFromNow: number = 1): Promise<string> {
+    try {
+      const seconds = minutesFromNow * 60;
+
+      return await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Hydration Reminder (Test)',
+          body: 'Drink ~250 ml now. This is a test notification.',
+          categoryIdentifier: this.CATEGORY_ID,
+          sticky: true,
+          autoDismiss: false,
+          data: {
+            mlAmount: 250,
+            isTest: true,
+          },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: seconds,
+        },
+      });
+    } catch (error) {
+      console.error('Error scheduling test notification:', error);
       throw error;
     }
   }

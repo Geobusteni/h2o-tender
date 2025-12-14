@@ -70,8 +70,8 @@ interface OnboardingData {
   reminderFrequency?: ReminderFrequency;
 }
 
-export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX.Element {
-  const { updateSettings } = useApp();
+export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): React.ReactElement {
+  const { settings, updateSettings } = useApp();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [currentStep, setCurrentStep] = useState<OnboardingStep>(OnboardingStep.WELCOME);
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({});
@@ -80,6 +80,29 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
   const [deviceLocationFailed, setDeviceLocationFailed] = useState(false);
   const [weightUnit, setWeightUnit] = useState<WeightUnit>('kg');
   const flatListRef = useRef<FlatList>(null);
+
+  // Check if user is retaking onboarding (has existing settings)
+  const isRetake = settings?.onboardingComplete === false && settings?.weight !== undefined;
+
+  // Handle cancel during retake
+  const handleCancelRetake = async () => {
+    Alert.alert(
+      'Cancel Onboarding',
+      'Are you sure you want to cancel? Your previous settings will be restored.',
+      [
+        { text: 'Continue Onboarding', style: 'cancel' },
+        {
+          text: 'Cancel & Go Back',
+          style: 'destructive',
+          onPress: async () => {
+            // Restore onboardingComplete flag to return to home
+            await updateSettings({ onboardingComplete: true });
+            navigation.replace('Home');
+          },
+        },
+      ]
+    );
+  };
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -182,7 +205,7 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
         }));
 
         addAIMessage(
-          `Great! I've set your location to ${locationText}. I'll use a moderate climate setting for your hydration calculations.`
+          `I've set your location to ${locationText}. I couldn't determine your exact climate, so I'm using a moderate (mild) setting. You can adjust this later in Settings if needed.`
         );
 
         setTimeout(() => {
@@ -417,14 +440,6 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
       return formatMilliliters(ml);
     };
 
-    const formatWeight = (kg: number): string => {
-      if (isImperial) {
-        const lbs = kg / 0.453592;
-        return `${lbs.toFixed(1)} lbs`;
-      }
-      return `${kg.toFixed(1)} kg`;
-    };
-
     const formatDailyGoal = (ml: number): string => {
       if (isImperial) {
         const flOz = ml * 0.033814;
@@ -440,7 +455,6 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
     const formatBaseCalc = (ml: number, weightKg: number): string => {
       if (isImperial) {
         const weightLbs = weightKg / 0.453592;
-        const flOz = ml * 0.033814;
         return `${formatAmount(ml)} (${weightLbs.toFixed(1)} lbs × 32 ml/kg)`;
       }
       return `${ml} ml (${weightKg.toFixed(1)} kg × 32 ml/kg)`;
@@ -558,7 +572,7 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
 
       case OnboardingStep.ASK_WEIGHT:
         return (
-          <View style={styles.weightInputContainer}>
+          <>
             <View style={styles.weightUnitSelector}>
               <TouchableOpacity
                 style={[
@@ -594,7 +608,7 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
               placeholder={`Enter weight in ${weightUnit}...`}
               onSubmit={handleWeight}
             />
-          </View>
+          </>
         );
 
       case OnboardingStep.ASK_AGE:
@@ -618,6 +632,7 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
         return (
           <ChatInput
             variant="time"
+            timeType="wake"
             onSubmit={(value) => handleWakeTime(value as string)}
           />
         );
@@ -626,6 +641,7 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
         return (
           <ChatInput
             variant="time"
+            timeType="sleep"
             onSubmit={(value) => handleSleepTime(value as string)}
           />
         );
@@ -660,6 +676,19 @@ export function AIOnboardingScreen({ navigation }: AIOnboardingScreenProps): JSX
 
   return (
     <SafeAreaView style={styles.container}>
+      {isRetake && (
+        <View style={styles.headerBar}>
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={handleCancelRetake}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Retaking Onboarding</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+      )}
       <KeyboardAvoidingView
         style={styles.keyboardAvoid}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -685,6 +714,35 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F5F5F5',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  cancelButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  cancelButtonText: {
+    color: '#E74C3C',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#666',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerSpacer: {
+    width: 60,
   },
   keyboardAvoid: {
     flex: 1,
@@ -722,17 +780,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
-  weightInputContainer: {
-    backgroundColor: '#F5F5F5',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-  },
   weightUnitSelector: {
     flexDirection: 'row',
     paddingHorizontal: 12,
     paddingTop: 12,
     paddingBottom: 8,
     gap: 8,
+    backgroundColor: '#F5F5F5',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
   },
   weightUnitButton: {
     flex: 1,

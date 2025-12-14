@@ -25,7 +25,7 @@ export function SegmentedControl({
   selectedIndex,
   onChange,
   style,
-}: SegmentedControlProps): JSX.Element {
+}: SegmentedControlProps): React.ReactElement {
   return (
     <View style={[styles.container, style]}>
       {options.map((option, index) => {

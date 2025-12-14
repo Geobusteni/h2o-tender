@@ -23,11 +23,14 @@ type InputVariant =
   | 'time'
   | 'location';
 
+type TimeType = 'wake' | 'sleep';
+
 interface ChatInputProps {
   variant: InputVariant;
   placeholder?: string;
   onSubmit: (value: string | number | ActivityLevel | ReminderFrequency) => void;
   onLocationRequest?: () => void;
+  timeType?: TimeType; // For time variant: 'wake' or 'sleep'
 }
 
 export function ChatInput({
@@ -35,10 +38,25 @@ export function ChatInput({
   placeholder,
   onSubmit,
   onLocationRequest,
-}: ChatInputProps): JSX.Element {
+  timeType,
+}: ChatInputProps): React.ReactElement {
   const [textValue, setTextValue] = useState('');
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [selectedTime, setSelectedTime] = useState(new Date());
+
+  // Set sensible default times based on timeType
+  const getDefaultTime = (): Date => {
+    const now = new Date();
+    if (timeType === 'wake') {
+      // Default wake time: 6:30 AM
+      now.setHours(6, 30, 0, 0);
+    } else if (timeType === 'sleep') {
+      // Default sleep time: 10:30 PM
+      now.setHours(22, 30, 0, 0);
+    }
+    return now;
+  };
+
+  const [selectedTime, setSelectedTime] = useState(getDefaultTime());
 
   const handleTextSubmit = () => {
     if (textValue.trim()) {
@@ -220,6 +238,15 @@ export function ChatInput({
   if (variant === 'location') {
     return (
       <View style={styles.locationContainer}>
+        {onLocationRequest && (
+          <TouchableOpacity
+            style={styles.locationButton}
+            onPress={onLocationRequest}
+          >
+            <Text style={styles.locationButtonText}>Use My Location</Text>
+          </TouchableOpacity>
+        )}
+        {onLocationRequest && <Text style={styles.orText}>or</Text>}
         <View style={styles.container}>
           <TextInput
             style={styles.textInput}
@@ -239,17 +266,6 @@ export function ChatInput({
             <Text style={styles.sendButtonText}>Send</Text>
           </TouchableOpacity>
         </View>
-        {onLocationRequest && (
-          <>
-            <Text style={styles.orText}>or</Text>
-            <TouchableOpacity
-              style={styles.locationButton}
-              onPress={onLocationRequest}
-            >
-              <Text style={styles.locationButtonText}>Use My Location</Text>
-            </TouchableOpacity>
-          </>
-        )}
       </View>
     );
   }
@@ -365,6 +381,7 @@ const styles = StyleSheet.create({
     color: '#757575',
     fontSize: 14,
     marginVertical: 8,
+    paddingHorizontal: 12,
   },
   locationButton: {
     backgroundColor: '#4CAF50',
@@ -372,7 +389,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     marginHorizontal: 12,
-    marginBottom: 12,
+    marginTop: 12,
     alignItems: 'center',
   },
   locationButtonText: {
