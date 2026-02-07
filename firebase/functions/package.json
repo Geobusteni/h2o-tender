@@ -23,7 +23,7 @@
   },
   "optionalDependencies": {
     "openai": "^6.10.0",
-    "@anthropic-ai/sdk": "^0.71.2"
+    "@anthropic-ai/sdk": "^0.74.0"
   },
   "private": true,
   "keywords": [
